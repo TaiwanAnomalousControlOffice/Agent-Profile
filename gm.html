@@ -1,174 +1,206 @@
-HTML
 <!DOCTYPE html>
 <html lang="zh-TW">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>異管局 GM 監控後台</title>
-    <script src="https://cdn.tailwindcss.com"></script>
+    <title>TRPG GM 控制台</title>
+    <style>
+        body { font-family: sans-serif; background: #0f172a; color: #f8fafc; padding: 20px; max-width: 900px; margin: auto; }
+        .global-panel { background: #1e293b; padding: 15px; border-radius: 8px; margin-bottom: 20px; border: 1px solid #334155; display: flex; gap: 15px; flex-wrap: wrap; align-items: center; }
+        .card { background: #1e293b; padding: 20px; border-radius: 8px; margin-bottom: 20px; border: 1px solid #334155; }
+        .grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-bottom: 10px; }
+        label { font-size: 0.8rem; color: #94a3b8; display: block; }
+        input { width: 100%; padding: 6px; background: #0f172a; border: 1px solid #475569; color: #fff; border-radius: 4px; box-sizing: border-box; }
+        button { background: #38bdf8; color: #0f172a; border: none; padding: 8px 12px; font-weight: bold; border-radius: 4px; cursor: pointer; }
+        button:hover { background: #0ea5e9; }
+        .btn-green { background: #34d399; }
+        .btn-green:hover { background: #10b981; }
+        h3 { margin-top: 0; color: #38bdf8; }
+    </style>
 </head>
-<body class="bg-slate-950 text-white min-h-screen p-6 pb-12">
-    <div class="max-w-6xl mx-auto space-y-6">
-        <header class="flex justify-between items-center border-b border-slate-800 pb-4">
-            <h1 class="text-3xl font-bold text-cyan-400">👑 異管局 GM 即時指揮後台</h1>
-            <p class="text-sm text-slate-400">全探員狀態雲端同步中...</p>
-        </header>
+<body>
 
-        <!-- 探員列表卡片區 -->
-        <div id="player-grid" class="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div class="bg-slate-900 border border-slate-800 p-6 rounded-xl text-slate-400 text-center col-span-2">
-                載入探員資料中...
+    <h1>👑 TRPG GM 遊戲管理控制台</h1>
+
+    <!-- GM 全域功能面板 -->
+    <div class="global-panel">
+        <div>
+            <label>GM 全域操作</label>
+            <button class="btn-green" id="rest-all-btn">⛺ 全員休息回復 (保留溢出)</button>
+        </div>
+        <div>
+            <label>批次增加全員道具數量</label>
+            <div style="display: flex; gap: 5px; margin-top: 5px;">
+                <select id="batch-item-select" style="background:#0f172a; color:#fff; border:1px solid #475569; padding:4px; border-radius:4px;">
+                    <option value="高效治療繃帶">高效治療繃帶</option>
+                    <option value="修為恢復藥劑">修為恢復藥劑</option>
+                    <option value="異常解除錠">異常解除錠</option>
+                    <option value="解咒符">解咒符</option>
+                    <option value="封魔匣">封魔匣</option>
+                </select>
+                <input type="number" id="batch-item-qty" value="1" style="width: 60px;">
+                <button id="batch-add-btn">發放</button>
             </div>
         </div>
     </div>
 
-    <!-- Firebase 邏輯 -->
+    <div id="players-container">載入玩家列表中...</div>
+
     <script type="module">
-        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
-        import { getFirestore, collection, onSnapshot, doc, updateDoc, increment } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+        import { db, collection, onSnapshot, doc, updateDoc, getDocs } from "./firebase-config.js";
 
-const firebaseConfig = {
-  apiKey: "AIzaSyDqMyinfY5lU_xiGaYU4vuHZrw91wR7BKc",
-  authDomain: "trpg-nfc-system.firebaseapp.com",
-  projectId: "trpg-nfc-system",
-  storageBucket: "trpg-nfc-system.firebasestorage.app",
-  messagingSenderId: "695423542715",
-  appId: "1:695423542715:web:1acfcca9a908b7213b509e"
-};
-        const app = initializeApp(firebaseConfig);
-        const db = getFirestore(app);
+        const container = document.getElementById("players-container");
+        const colRef = collection(db, "players");
 
-        const grid = document.getElementById('player-grid');
-
-        // 定義 GM 後台要動態生成的調整控制項設定
-        const gmAdjustStats = [
-            { key: 'hp', label: '生命值 (HP)', theme: 'red' },
-            { key: 'mp', label: '修為 (MP)', theme: 'blue' },
-            { key: 'speed', label: '速度 (SP)', theme: 'emerald' }
-        ];
-
-        onSnapshot(collection(db, "players"), (snapshot) => {
-            grid.innerHTML = '';
-            
+        // 即時監聽所有玩家
+        onSnapshot(colRef, (snapshot) => {
+            container.innerHTML = "";
             if (snapshot.empty) {
-                grid.innerHTML = '<div class="col-span-2 text-center text-slate-500">目前沒有任何探員檔案。</div>';
+                container.innerHTML = "<p>目前沒有找到任何玩家資料。</p>";
                 return;
             }
 
-            snapshot.forEach((docSnap) => {
-                const data = docSnap.data();
-                const id = docSnap.id;
-                const miscItems = data.miscItems || [];
+            snapshot.forEach((documentSnap) => {
+                const playerId = documentSnap.id;
+                const data = documentSnap.data();
 
-                let miscHtml = miscItems.map((item, idx) => `
-                    <span class="bg-slate-800 px-2 py-0.5 rounded text-xs flex items-center space-x-1">
-                        <span>${item}</span>
-                        <button onclick="gmRemoveMisc('${id}', ${idx})" class="text-red-400 hover:text-red-300 font-bold ml-1">×</button>
-                    </span>
-                `).join('') || '<span class="text-slate-500 text-xs">無</span>';
+                const card = document.createElement("div");
+                card.className = "card";
+                
+                let html = `<h3>${data.姓名 || playerId} (${playerId}) - 種族: ${data.種族 || ''} / 職業: ${data.職業 || ''}</h3>`;
+                
+                // 資產與調整
+                html += `<div style="margin-bottom:10px; background:#0f172a; padding:10px; border-radius:6px; display:flex; justify-content:space-between; align-items:center;">
+                    <span>💰 現有資產: <strong>${data.資產 || 0}</strong></span>
+                    <div style="display:flex; gap:5px;">
+                        <input type="number" id="asset-input-${playerId}" placeholder="輸入金額" style="width:100px;">
+                        <button onclick="updateAsset('${playerId}', '${data.資產 || 0}')">修改資產</button>
+                    </div>
+                </div>`;
 
-                // 動態產生 GM 數值調整按鈕群組
-                let gmControlsHtml = '';
-                gmAdjustStats.forEach(stat => {
-                    gmControlsHtml += `
-                        <div class="space-y-0.5">
-                            <span class="text-slate-500 text-[10px]">${stat.label}</span>
-                            <div class="flex space-x-1">
-                                <button onclick="gmUpdate('${id}', '${stat.key}', -1)" class="flex-1 bg-${stat.theme}-950 hover:bg-${stat.theme}-900 text-${stat.theme}-300 py-1 rounded font-bold">-1</button>
-                                <button onclick="gmUpdate('${id}', '${stat.key}', -5)" class="flex-1 bg-${stat.theme}-950 hover:bg-${stat.theme}-900 text-${stat.theme}-300 py-1 rounded font-bold">-5</button>
-                                <button onclick="gmUpdate('${id}', '${stat.key}', 1)" class="flex-1 bg-${stat.theme}-950 hover:bg-${stat.theme}-900 text-${stat.theme}-300 py-1 rounded font-bold">+1</button>
-                                <button onclick="gmUpdate('${id}', '${stat.key}', 5)" class="flex-1 bg-${stat.theme}-950 hover:bg-${stat.theme}-900 text-${stat.theme}-300 py-1 rounded font-bold">+5</button>
-                            </div>
+                html += `<div class="grid">`;
+                
+                // 屬性與上限
+                const fields = [
+                    { cur: "生命值", max: "生命初始值" },
+                    { cur: "修為", max: "修為初始值" },
+                    { cur: "速度", max: "速度初始值" },
+                    { cur: "攻擊", max: "攻擊初始值" },
+                    { cur: "防禦", max: "防禦初始值" }
+                ];
+
+                fields.forEach(f => {
+                    html += `
+                        <div style="background:#0f172a; padding:8px; border-radius:4px;">
+                            <label>${f.cur}</label>
+                            <input type="number" id="gm-${playerId}-${f.cur}" value="${data[f.cur] !== undefined ? data[f.cur] : 0}">
+                            <label style="margin-top:4px; color:#facc15;">上限/初始 (${f.max})</label>
+                            <input type="number" id="gm-${playerId}-${f.max}" value="${data[f.max] !== undefined ? data[f.max] : 0}">
                         </div>
                     `;
                 });
 
-                const card = `
-                    <div class="bg-slate-900 border border-slate-800 rounded-xl p-5 space-y-4 shadow-xl">
-                        <!-- 頭像與身份 -->
-                        <div class="flex items-center space-x-4">
-                            <img src="${data.avatar || 'https://via.placeholder.com/100'}" class="w-16 h-16 rounded-full object-cover border border-slate-700">
-                            <div>
-                                <h2 class="text-xl font-bold">${data.name || '未命名'} <span class="text-xs text-cyan-400 font-mono">(${data.codename || '無代號'})</span></h2>
-                                <p class="text-xs text-slate-400">${data.race || '-'} | ${data.occupation || '-'} | ID: ${id}</p>
-                                <p class="text-xs text-slate-400">性別：${data.gender || '-'} / 年齡：${data.age ?? '-'}</p>
-                            </div>
+                // 常用道具
+                const items = ["高效治療繃帶", "修為恢復藥劑", "異常解除錠", "解咒符", "封魔匣"];
+                items.forEach(item => {
+                    html += `
+                        <div style="background:#0f172a; padding:8px; border-radius:4px;">
+                            <label>${item}</label>
+                            <input type="number" id="gm-${playerId}-${item}" value="${data[item] !== undefined ? data[item] : 0}">
                         </div>
+                    `;
+                });
 
-                        <!-- 戰鬥數值 -->
-                        <div class="grid grid-cols-3 gap-2 bg-slate-950 p-2.5 rounded-lg text-center text-sm">
-                            <div><span class="text-xs text-slate-500 block">HP</span><span class="font-bold text-red-400">${data.hp ?? 0}</span></div>
-                            <div><span class="text-xs text-slate-500 block">MP</span><span class="font-bold text-blue-400">${data.mp ?? 0}</span></div>
-                            <div><span class="text-xs text-slate-500 block">SP</span><span class="font-bold text-green-400">${data.speed ?? 0}</span></div>
-                        </div>
-                        <div class="grid grid-cols-3 gap-2 bg-slate-950 p-2.5 rounded-lg text-center text-sm">
-                            <div><span class="text-xs text-slate-500 block">攻擊</span><span class="font-bold text-amber-400">${data.atk ?? 0}</span></div>
-                            <div><span class="text-xs text-slate-500 block">防禦</span><span class="font-bold text-purple-400">${data.def ?? 0}</span></div>
-                            <div><span class="text-xs text-slate-500 block">資產</span><span class="font-bold text-yellow-400">${data.assets ?? 0}</span></div>
-                        </div>
-
-                        <!-- 裝備資訊 -->
-                        <div class="bg-slate-950 p-3 rounded-lg text-xs space-y-1.5 border border-slate-800">
-                            <span class="text-slate-400 font-semibold block">⚔️ 裝備：</span>
-                            <div class="grid grid-cols-2 gap-1 text-slate-300">
-                                <div>主：${data.eq_main || '無'}</div>
-                                <div>副：${data.eq_off || '無'}</div>
-                                <div>頭：${data.eq_head || '無'}</div>
-                                <div>頸：${data.eq_neck || '無'}</div>
-                                <div>身：${data.eq_body || '無'}</div>
-                                <div>手：${data.eq_hand || '無'}</div>
-                                <div>腰：${data.eq_waist || '無'}</div>
-                                <div>腳：${data.eq_foot || '無'}</div>
-                            </div>
-                        </div>
-
-                        <!-- 消耗品數量 -->
-                        <div class="bg-slate-950 p-3 rounded-lg text-xs space-y-2 border border-slate-800">
-                            <span class="text-slate-400 font-semibold block">🧪 特殊消耗品：</span>
-                            <div class="grid grid-cols-2 gap-2 text-slate-300">
-                                <div>繃帶：<b class="text-teal-400">${data.bandage ?? 0}</b></div>
-                                <div>修為藥劑：<b class="text-teal-400">${data.mp_potion ?? 0}</b></div>
-                                <div>異常解錠：<b class="text-teal-400">${data.cure_pill ?? 0}</b></div>
-                                <div>解咒符：<b class="text-teal-400">${data.dispel_charm ?? 0}</b></div>
-                                <div class="col-span-2">封魔匣：<b class="text-teal-400">${data.seal_box ?? 0}</b></div>
-                            </div>
-                        </div>
-
-                        <!-- 其餘道具背包 -->
-                        <div class="bg-slate-950 p-3 rounded-lg text-xs space-y-1.5 border border-slate-800">
-                            <span class="text-slate-400 font-semibold block">🎒 其餘道具背包：</span>
-                            <div class="flex flex-wrap gap-1">${miscHtml}</div>
-                        </div>
-
-                        <!-- GM 快速控制面板 (動態渲染) -->
-                        <div class="space-y-2.5 pt-2 border-t border-slate-800 text-xs">
-                            <span class="text-slate-400 font-semibold block">👑 GM 快速調整：</span>
-                            
-                            ${gmControlsHtml}
-
-                            <!-- 其他項目 -->
-                            <div class="flex space-x-1 pt-1">
-                                <button onclick="gmUpdate('${id}', 'assets', -100)" class="flex-1 bg-yellow-950 hover:bg-yellow-900 text-yellow-300 py-1 rounded">資產-100</button>
-                                <button onclick="gmUpdate('${id}', 'assets', 100)" class="flex-1 bg-yellow-950 hover:bg-yellow-900 text-yellow-300 py-1 rounded">資產+100</button>
-                                <button onclick="gmUpdate('${id}', 'bandage', 1)" class="flex-1 bg-teal-950 hover:bg-teal-900 text-teal-300 py-1 rounded">繃帶+1</button>
-                            </div>
-                        </div>
-                    </div>
-                `;
-                grid.innerHTML += card;
+                html += `</div>`;
+                html += `<button class="btn-green" style="margin-top:10px; width:100%;" onclick="savePlayer('${playerId}')">💾 儲存該玩家所有數值與上限</button>`;
+                
+                card.innerHTML = html;
+                container.appendChild(card);
             });
         });
 
-        window.gmUpdate = async function(id, field, amount) {
-            const docRef = doc(db, "players", id);
-            await updateDoc(docRef, {
-                [field]: increment(amount)
+        // 單一玩家儲存
+        window.savePlayer = async (playerId) => {
+            const fields = ["生命值", "生命初始值", "修為", "修為初始值", "速度", "速度初始值", "攻擊", "攻擊初始值", "防禦", "防禦初始值", "高效治療繃帶", "修為恢復藥劑", "異常解除錠", "解咒符", "封魔匣"];
+            const updateData = {};
+            fields.forEach(f => {
+                const el = document.getElementById(`gm-${playerId}-${f}`);
+                if (el) updateData[f] = Number(el.value);
             });
+
+            try {
+                await updateDoc(doc(db, "players", playerId), updateData);
+                alert(`玩家 ${playerId} 資料已成功更新！`);
+            } catch (e) {
+                console.error(e);
+                alert("更新失敗");
+            }
         };
 
-        window.gmRemoveMisc = async function(id, index) {
-            const docRef = doc(db, "players", id);
-        }
+        // GM 調整資產
+        window.updateAsset = async (playerId, currentAsset) => {
+            const inputVal = document.getElementById(`asset-input-${playerId}`).value;
+            if (inputVal === "") return;
+            const newAsset = Number(inputVal);
+            try {
+                await updateDoc(doc(db, "players", playerId), { 資產: newAsset });
+                alert("資產更新成功！");
+            } catch(e) {
+                console.error(e);
+                alert("資產更新失敗");
+            }
+        };
+
+        // GM 全員休息回復（生命、修為若小於初始值則恢復，若大於則保持溢出狀態不修正）
+        document.getElementById("rest-all-btn").addEventListener("click", async () => {
+            if (!confirm("確定要讓全體玩家休息嗎？這會將生命與修為回補至初始值，但保留溢出數值。")) return;
+            
+            const querySnapshot = await getDocs(colRef);
+            const updates = [];
+
+            querySnapshot.forEach((documentSnap) => {
+                const data = documentSnap.data();
+                const pId = documentSnap.id;
+                
+                const currentHP = data["生命值"] || 0;
+                const maxHP = data["生命初始值"] || 0;
+                const currentMP = data["修為"] || 0;
+                const maxMP = data["修為初始值"] || 0;
+
+                const newHP = Math.max(currentHP, maxHP);
+                const newMP = Math.max(currentMP, maxMP);
+
+                const docRefTarget = doc(db, "players", pId);
+                updates.push(updateDoc(docRefTarget, { "生命值": newHP, "修為": newMP }));
+            });
+
+            await Promise.all(updates);
+            alert("全員休息完畢！狀態已回補（溢出數值已完美保留）。");
+        });
+
+        // 批次發放常用道具給所有人
+        document.getElementById("batch-add-btn").addEventListener("click", async () => {
+            const itemName = document.getElementById("batch-item-select").value;
+            const addQty = Number(document.getElementById("batch-item-qty").value) || 0;
+            if (addQty <= 0) return;
+
+            if (!confirm(`確定要幫所有人增加 ${addQty} 個 [${itemName}] 嗎？`)) return;
+
+            const querySnapshot = await getDocs(colRef);
+            const updates = [];
+
+            querySnapshot.forEach((documentSnap) => {
+                const data = documentSnap.data();
+                const pId = documentSnap.id;
+                const currentCount = data[itemName] || 0;
+
+                const docRefTarget = doc(db, "players", pId);
+                updates.push(updateDoc(docRefTarget, { [itemName]: currentCount + addQty }));
+            });
+
+            await Promise.all(updates);
+            alert("批次發放道具成功！");
+        });
     </script>
 </body>
 </html>
