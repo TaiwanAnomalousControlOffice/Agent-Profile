@@ -1,0 +1,174 @@
+HTML
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>異管局 GM 監控後台</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-slate-950 text-white min-h-screen p-6 pb-12">
+    <div class="max-w-6xl mx-auto space-y-6">
+        <header class="flex justify-between items-center border-b border-slate-800 pb-4">
+            <h1 class="text-3xl font-bold text-cyan-400">👑 異管局 GM 即時指揮後台</h1>
+            <p class="text-sm text-slate-400">全探員狀態雲端同步中...</p>
+        </header>
+
+        <!-- 探員列表卡片區 -->
+        <div id="player-grid" class="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div class="bg-slate-900 border border-slate-800 p-6 rounded-xl text-slate-400 text-center col-span-2">
+                載入探員資料中...
+            </div>
+        </div>
+    </div>
+
+    <!-- Firebase 邏輯 -->
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
+        import { getFirestore, collection, onSnapshot, doc, updateDoc, increment } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+
+const firebaseConfig = {
+  apiKey: "AIzaSyDqMyinfY5lU_xiGaYU4vuHZrw91wR7BKc",
+  authDomain: "trpg-nfc-system.firebaseapp.com",
+  projectId: "trpg-nfc-system",
+  storageBucket: "trpg-nfc-system.firebasestorage.app",
+  messagingSenderId: "695423542715",
+  appId: "1:695423542715:web:1acfcca9a908b7213b509e"
+};
+        const app = initializeApp(firebaseConfig);
+        const db = getFirestore(app);
+
+        const grid = document.getElementById('player-grid');
+
+        // 定義 GM 後台要動態生成的調整控制項設定
+        const gmAdjustStats = [
+            { key: 'hp', label: '生命值 (HP)', theme: 'red' },
+            { key: 'mp', label: '修為 (MP)', theme: 'blue' },
+            { key: 'speed', label: '速度 (SP)', theme: 'emerald' }
+        ];
+
+        onSnapshot(collection(db, "players"), (snapshot) => {
+            grid.innerHTML = '';
+            
+            if (snapshot.empty) {
+                grid.innerHTML = '<div class="col-span-2 text-center text-slate-500">目前沒有任何探員檔案。</div>';
+                return;
+            }
+
+            snapshot.forEach((docSnap) => {
+                const data = docSnap.data();
+                const id = docSnap.id;
+                const miscItems = data.miscItems || [];
+
+                let miscHtml = miscItems.map((item, idx) => `
+                    <span class="bg-slate-800 px-2 py-0.5 rounded text-xs flex items-center space-x-1">
+                        <span>${item}</span>
+                        <button onclick="gmRemoveMisc('${id}', ${idx})" class="text-red-400 hover:text-red-300 font-bold ml-1">×</button>
+                    </span>
+                `).join('') || '<span class="text-slate-500 text-xs">無</span>';
+
+                // 動態產生 GM 數值調整按鈕群組
+                let gmControlsHtml = '';
+                gmAdjustStats.forEach(stat => {
+                    gmControlsHtml += `
+                        <div class="space-y-0.5">
+                            <span class="text-slate-500 text-[10px]">${stat.label}</span>
+                            <div class="flex space-x-1">
+                                <button onclick="gmUpdate('${id}', '${stat.key}', -1)" class="flex-1 bg-${stat.theme}-950 hover:bg-${stat.theme}-900 text-${stat.theme}-300 py-1 rounded font-bold">-1</button>
+                                <button onclick="gmUpdate('${id}', '${stat.key}', -5)" class="flex-1 bg-${stat.theme}-950 hover:bg-${stat.theme}-900 text-${stat.theme}-300 py-1 rounded font-bold">-5</button>
+                                <button onclick="gmUpdate('${id}', '${stat.key}', 1)" class="flex-1 bg-${stat.theme}-950 hover:bg-${stat.theme}-900 text-${stat.theme}-300 py-1 rounded font-bold">+1</button>
+                                <button onclick="gmUpdate('${id}', '${stat.key}', 5)" class="flex-1 bg-${stat.theme}-950 hover:bg-${stat.theme}-900 text-${stat.theme}-300 py-1 rounded font-bold">+5</button>
+                            </div>
+                        </div>
+                    `;
+                });
+
+                const card = `
+                    <div class="bg-slate-900 border border-slate-800 rounded-xl p-5 space-y-4 shadow-xl">
+                        <!-- 頭像與身份 -->
+                        <div class="flex items-center space-x-4">
+                            <img src="${data.avatar || 'https://via.placeholder.com/100'}" class="w-16 h-16 rounded-full object-cover border border-slate-700">
+                            <div>
+                                <h2 class="text-xl font-bold">${data.name || '未命名'} <span class="text-xs text-cyan-400 font-mono">(${data.codename || '無代號'})</span></h2>
+                                <p class="text-xs text-slate-400">${data.race || '-'} | ${data.occupation || '-'} | ID: ${id}</p>
+                                <p class="text-xs text-slate-400">性別：${data.gender || '-'} / 年齡：${data.age ?? '-'}</p>
+                            </div>
+                        </div>
+
+                        <!-- 戰鬥數值 -->
+                        <div class="grid grid-cols-3 gap-2 bg-slate-950 p-2.5 rounded-lg text-center text-sm">
+                            <div><span class="text-xs text-slate-500 block">HP</span><span class="font-bold text-red-400">${data.hp ?? 0}</span></div>
+                            <div><span class="text-xs text-slate-500 block">MP</span><span class="font-bold text-blue-400">${data.mp ?? 0}</span></div>
+                            <div><span class="text-xs text-slate-500 block">SP</span><span class="font-bold text-green-400">${data.speed ?? 0}</span></div>
+                        </div>
+                        <div class="grid grid-cols-3 gap-2 bg-slate-950 p-2.5 rounded-lg text-center text-sm">
+                            <div><span class="text-xs text-slate-500 block">攻擊</span><span class="font-bold text-amber-400">${data.atk ?? 0}</span></div>
+                            <div><span class="text-xs text-slate-500 block">防禦</span><span class="font-bold text-purple-400">${data.def ?? 0}</span></div>
+                            <div><span class="text-xs text-slate-500 block">資產</span><span class="font-bold text-yellow-400">${data.assets ?? 0}</span></div>
+                        </div>
+
+                        <!-- 裝備資訊 -->
+                        <div class="bg-slate-950 p-3 rounded-lg text-xs space-y-1.5 border border-slate-800">
+                            <span class="text-slate-400 font-semibold block">⚔️ 裝備：</span>
+                            <div class="grid grid-cols-2 gap-1 text-slate-300">
+                                <div>主：${data.eq_main || '無'}</div>
+                                <div>副：${data.eq_off || '無'}</div>
+                                <div>頭：${data.eq_head || '無'}</div>
+                                <div>頸：${data.eq_neck || '無'}</div>
+                                <div>身：${data.eq_body || '無'}</div>
+                                <div>手：${data.eq_hand || '無'}</div>
+                                <div>腰：${data.eq_waist || '無'}</div>
+                                <div>腳：${data.eq_foot || '無'}</div>
+                            </div>
+                        </div>
+
+                        <!-- 消耗品數量 -->
+                        <div class="bg-slate-950 p-3 rounded-lg text-xs space-y-2 border border-slate-800">
+                            <span class="text-slate-400 font-semibold block">🧪 特殊消耗品：</span>
+                            <div class="grid grid-cols-2 gap-2 text-slate-300">
+                                <div>繃帶：<b class="text-teal-400">${data.bandage ?? 0}</b></div>
+                                <div>修為藥劑：<b class="text-teal-400">${data.mp_potion ?? 0}</b></div>
+                                <div>異常解錠：<b class="text-teal-400">${data.cure_pill ?? 0}</b></div>
+                                <div>解咒符：<b class="text-teal-400">${data.dispel_charm ?? 0}</b></div>
+                                <div class="col-span-2">封魔匣：<b class="text-teal-400">${data.seal_box ?? 0}</b></div>
+                            </div>
+                        </div>
+
+                        <!-- 其餘道具背包 -->
+                        <div class="bg-slate-950 p-3 rounded-lg text-xs space-y-1.5 border border-slate-800">
+                            <span class="text-slate-400 font-semibold block">🎒 其餘道具背包：</span>
+                            <div class="flex flex-wrap gap-1">${miscHtml}</div>
+                        </div>
+
+                        <!-- GM 快速控制面板 (動態渲染) -->
+                        <div class="space-y-2.5 pt-2 border-t border-slate-800 text-xs">
+                            <span class="text-slate-400 font-semibold block">👑 GM 快速調整：</span>
+                            
+                            ${gmControlsHtml}
+
+                            <!-- 其他項目 -->
+                            <div class="flex space-x-1 pt-1">
+                                <button onclick="gmUpdate('${id}', 'assets', -100)" class="flex-1 bg-yellow-950 hover:bg-yellow-900 text-yellow-300 py-1 rounded">資產-100</button>
+                                <button onclick="gmUpdate('${id}', 'assets', 100)" class="flex-1 bg-yellow-950 hover:bg-yellow-900 text-yellow-300 py-1 rounded">資產+100</button>
+                                <button onclick="gmUpdate('${id}', 'bandage', 1)" class="flex-1 bg-teal-950 hover:bg-teal-900 text-teal-300 py-1 rounded">繃帶+1</button>
+                            </div>
+                        </div>
+                    </div>
+                `;
+                grid.innerHTML += card;
+            });
+        });
+
+        window.gmUpdate = async function(id, field, amount) {
+            const docRef = doc(db, "players", id);
+            await updateDoc(docRef, {
+                [field]: increment(amount)
+            });
+        };
+
+        window.gmRemoveMisc = async function(id, index) {
+            const docRef = doc(db, "players", id);
+        }
+    </script>
+</body>
+</html>

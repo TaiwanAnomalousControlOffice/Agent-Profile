@@ -1,0 +1,163 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>探員個人終端 - 特別管理事務局</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+</head>
+<body class="bg-slate-950 text-slate-100 min-h-screen p-4 sm:p-6 flex flex-col justify-center items-center">
+
+    <div class="max-w-md w-full">
+        <!-- 頂部標題 -->
+        <div class="text-center mb-6">
+            <span class="text-xs bg-amber-950 text-amber-400 px-3 py-1 rounded-full border border-amber-800">T.A.C.O. 探員安全終端</span>
+            <h1 class="text-2xl font-bold tracking-wider text-slate-100 mt-2">個人狀態同步面板</h1>
+        </div>
+
+        <!-- 探員專屬卡片容器 -->
+        <div id="player-card" class="bg-slate-900 border border-slate-800 rounded-2xl p-6 shadow-2xl">
+            <div class="text-center py-12 text-slate-500 animate-pulse">
+                正在連線至局本部雲端資料庫...
+            </div>
+        </div>
+
+        <!-- 底部提示 -->
+        <div class="text-center mt-6 text-xs text-slate-500">
+            連線狀態：<span id="connection-status" class="text-emerald-400 font-medium">連線中...</span>
+        </div>
+    </div>
+
+    <script>
+        const firebaseConfig = {
+            apiKey: "你的apiKey",
+            authDomain: "trpg-nfc-system.firebaseapp.com",
+            projectId: "trpg-nfc-system",
+            storageBucket: "trpg-nfc-system.appspot.com",
+            messagingSenderId: "695423542715",
+            appId: "1:695423542715:web:1acfcca9a08b7213b509e"
+        };
+
+        firebase.initializeApp(firebaseConfig);
+        const db = firebase.firestore();
+
+        // 從網址列取得玩家 ID，例如 player.html?id=player01
+        const urlParams = new URLSearchParams(window.location.search);
+        const playerId = urlParams.get('id');
+
+        const cardContainer = document.getElementById("player-card");
+        const statusSpan = document.getElementById("connection-status");
+
+        if (!playerId) {
+            cardContainer.innerHTML = `
+                <div class="text-center py-8">
+                    <p class="text-rose-400 font-bold text-lg mb-2">⚠️ 找不到探員代號</p>
+                    <p class="text-sm text-slate-400">請確認你的網址是否正確帶有參數。<br>範例：<code>player.html?id=player01</code></p>
+                </div>
+            `;
+            statusSpan.textContent = "網址參數錯誤";
+            statusSpan.className = "text-rose-400 font-medium";
+        } else {
+            db.collection("players").doc(playerId).onSnapshot((doc) => {
+                if (!doc.exists) {
+                    cardContainer.innerHTML = `
+                        <div class="text-center py-8">
+                            <p class="text-amber-400 font-bold mb-2">查無此探員資料</p>
+                            <p class="text-sm text-slate-400">系統中找不到代號為 <code>${playerId}</code> 的探員，請確認 Google 試算表是否有該 ID 並已同步。</p>
+                        </div>
+                    `;
+                    statusSpan.textContent = "查無資料";
+                    return;
+                }
+
+                const data = doc.data();
+                const name = data.姓名 || data.name || "未命名探員";
+                const codename = data.代號 || data.codename || "無代號";
+                const job = data.職業 || data.job || "一般探員";
+                const age = data.年齡 || data.age || "未知";
+                const gender = data.性別 || data.gender || "未知";
+                const avatar = data.頭貼 || data.avatar || "https://placehold.co/150x150/1e293b/cbd5e1?text=Agent";
+
+                const hp = Number(data.生命值 !== undefined ? data.生命值 : 100);
+                const mp = Number(data.理智值 !== undefined ? data.理智值 : 50);
+                const equipment = data.裝備 || data.equipment || "無";
+                const items = data.道具 || data.miscItems || "無";
+
+                cardContainer.innerHTML = `
+                    <!-- 頭像與身分 -->
+                    <div class="flex items-center gap-4 mb-6 border-b border-slate-800 pb-5">
+                        <img src="${avatar}" alt="頭貼" class="w-20 h-20 rounded-xl object-cover border-2 border-slate-700 bg-slate-950 shadow">
+                        <div>
+                            <span class="text-xs bg-amber-950/80 text-amber-400 px-2.5 py-0.5 rounded border border-amber-800/60 font-mono">代號：${codename}</span>
+                            <h2 class="text-2xl font-bold text-slate-100 mt-1">${name}</h2>
+                            <p class="text-xs text-slate-400 mt-0.5">${job} | ${gender} / ${age}歲</p>
+                        </div>
+                    </div>
+
+                    <!-- 數值操作區 -->
+                    <div class="space-y-4 mb-6">
+                        <!-- HP -->
+                        <div class="bg-slate-950/60 p-4 rounded-xl border border-slate-800">
+                            <div class="flex justify-between items-center mb-2">
+                                <span class="text-rose-400 font-semibold text-sm">生命值 (HP)</span>
+                                <span class="text-2xl font-extrabold text-rose-300 font-mono">${hp}</span>
+                            </div>
+                            <div class="grid grid-cols-4 gap-1.5">
+                                <button onclick="adjustStat('${playerId}', '生命值', -5)" class="bg-rose-950/60 hover:bg-rose-900 text-rose-300 text-xs py-1.5 rounded border border-rose-900 transition font-mono">-5</button>
+                                <button onclick="adjustStat('${playerId}', '生命值', -1)" class="bg-rose-950/60 hover:bg-rose-900 text-rose-300 text-xs py-1.5 rounded border border-rose-900 transition font-mono">-1</button>
+                                <button onclick="adjustStat('${playerId}', '生命值', 1)" class="bg-emerald-950/60 hover:bg-emerald-900 text-emerald-300 text-xs py-1.5 rounded border border-emerald-900 transition font-mono">+1</button>
+                                <button onclick="adjustStat('${playerId}', '生命值', 5)" class="bg-emerald-950/60 hover:bg-emerald-900 text-emerald-300 text-xs py-1.5 rounded border border-emerald-900 transition font-mono">+5</button>
+                            </div>
+                        </div>
+
+                        <!-- MP -->
+                        <div class="bg-slate-950/60 p-4 rounded-xl border border-slate-800">
+                            <div class="flex justify-between items-center mb-2">
+                                <span class="text-sky-400 font-semibold text-sm">理智值 (MP)</span>
+                                <span class="text-2xl font-extrabold text-sky-300 font-mono">${mp}</span>
+                            </div>
+                            <div class="grid grid-cols-4 gap-1.5">
+                                <button onclick="adjustStat('${playerId}', '理智值', -5)" class="bg-sky-950/60 hover:bg-sky-900 text-sky-300 text-xs py-1.5 rounded border border-sky-900 transition font-mono">-5</button>
+                                <button onclick="adjustStat('${playerId}', '理智值', -1)" class="bg-sky-950/60 hover:bg-sky-900 text-sky-300 text-xs py-1.5 rounded border border-sky-900 transition font-mono">-1</button>
+                                <button onclick="adjustStat('${playerId}', '理智值', 1)" class="bg-sky-950/60 hover:bg-sky-900 text-sky-300 text-xs py-1.5 rounded border border-sky-900 transition font-mono">+1</button>
+                                <button onclick="adjustStat('${playerId}', '理智值', 5)" class="bg-sky-950/60 hover:bg-sky-900 text-sky-300 text-xs py-1.5 rounded border border-sky-900 transition font-mono">+5</button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- 裝備與道具 -->
+                    <div class="grid grid-cols-2 gap-3 text-xs">
+                        <div class="bg-slate-950/40 p-3 rounded-lg border border-slate-800/80">
+                            <span class="text-amber-400 font-semibold block mb-1">⚔️ 攜帶裝備</span>
+                            <span class="text-slate-300 leading-relaxed">${equipment}</span>
+                        </div>
+                        <div class="bg-slate-950/40 p-3 rounded-lg border border-slate-800/80">
+                            <span class="text-purple-400 font-semibold block mb-1">🎒 專屬道具</span>
+                            <span class="text-slate-300 leading-relaxed">${items}</span>
+                        </div>
+                    </div>
+                `;
+                statusSpan.textContent = "已同步連線 (Live)";
+            }, (error) => {
+                console.error(error);
+                statusSpan.textContent = "連線異常";
+                statusSpan.className = "text-rose-400 font-medium";
+            });
+        }
+
+        function adjustStat(id, statKey, amount) {
+            const docRef = db.collection("players").doc(id);
+            docRef.get().then((doc) => {
+                if (doc.exists) {
+                    const currentVal = Number(doc.data()[statKey]) || 0;
+                    docRef.update({
+                        [statKey]: currentVal + amount
+                    });
+                }
+            });
+        }
+    </script>
+</body>
+</html>
