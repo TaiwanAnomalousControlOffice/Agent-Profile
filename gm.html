@@ -14,26 +14,28 @@
 
         <!-- 玩家列表容器 -->
         <div id="playersContainer" class="space-y-6">
-            <div class="text-center py-10 text-slate-500">載入玩家資料中...</div>
+            <div id="statusMsg" class="text-center py-10 text-slate-400">正在連線至 Firebase 讀取玩家資料...</div>
         </div>
     </div>
 
     <!-- Firebase 邏輯 -->
     <script type="module">
         import { db } from './firebase-config.js';
-        import { ref, onValue, update, set, push } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js";
+        import { ref, onValue, update, set } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js";
 
         const playersRef = ref(db, 'players');
 
+        // 監聽 players 節點
         onValue(playersRef, (snapshot) => {
-            const data = snapshot.val();
             const container = document.getElementById('playersContainer');
-            container.innerHTML = '';
-
-            if (!data) {
-                container.innerHTML = '<div class="text-center py-10 text-slate-500">目前沒有任何玩家資料</div>';
+            
+            if (!snapshot.exists()) {
+                container.innerHTML = '<div class="text-center py-10 text-amber-500">資料庫中找不到 players 節點或目前沒有任何玩家資料，請點擊右上角「建立新角色」新增。</div>';
                 return;
             }
+
+            const data = snapshot.val();
+            container.innerHTML = ''; // 清空狀態
 
             Object.entries(data).forEach(([id, p]) => {
                 const card = document.createElement('div');
@@ -43,9 +45,9 @@
                     <!-- 頭部與基本資訊 -->
                     <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 border-b border-slate-800 pb-4">
                         <div class="flex items-center gap-4">
-                            <img src="${p.avatar || ''}" alt="頭像" class="w-16 h-16 rounded-full object-cover border border-amber-400">
+                            <img src="${p.avatar || 'https://via.placeholder.com/150'}" alt="頭像" class="w-16 h-16 rounded-full object-cover border border-amber-400">
                             <div>
-                                <div class="text-xl font-bold text-amber-300">${p.name || '未命名'} <span class="text-sm text-slate-400">(${p.code || '無代號'})</span></div>
+                                <div class="text-xl font-bold text-amber-300">${p.name || '未命名'} <span class="text-sm text-slate-400">ID: ${id} (${p.code || '無代號'})</span></div>
                                 <div class="text-sm text-slate-400">性別: ${p.gender || '-'} | 年齡: ${p.age || '-'} | 種族: ${p.race || '-'} | 職業: ${p.class || '-'}</div>
                             </div>
                         </div>
@@ -64,13 +66,13 @@
                             <div class="flex items-center gap-1 mb-2">
                                 <input type="number" value="${p.hp ?? 0}" onchange="updateField('${id}', 'hp', parseInt(this.value))" class="w-16 bg-slate-800 border border-slate-700 rounded px-2 py-1 text-center">
                                 <span>/</span>
-                                <input type="number" value="${p.hpMax ?? 0}" onchange="updateField('${id}', 'hpMax', parseInt(this.value))" class="w-16 bg-slate-800 border border-slate-700 rounded px-2 py-1 text-center text-slate-400" title="初始/上限值">
+                                <input type="number" value="${p.hpMax ?? 0}" onchange="updateField('${id}', 'hpMax', parseInt(this.value))" class="w-16 bg-slate-800 border border-slate-700 rounded px-2 py-1 text-center text-slate-400">
                             </div>
                             <div class="flex gap-1 flex-wrap">
-                                <button onclick="modifyVal('${id}', 'hp', -5, ${p.hpMax ?? 0})" class="bg-red-600 px-2 py-0.5 rounded text-xs">-5</button>
-                                <button onclick="modifyVal('${id}', 'hp', -1, ${p.hpMax ?? 0})" class="bg-red-500 px-2 py-0.5 rounded text-xs">-1</button>
-                                <button onclick="modifyVal('${id}', 'hp', 1, ${p.hpMax ?? 0})" class="bg-green-500 px-2 py-0.5 rounded text-xs">+1</button>
-                                <button onclick="modifyVal('${id}', 'hp', 5, ${p.hpMax ?? 0})" class="bg-green-600 px-2 py-0.5 rounded text-xs">+5</button>
+                                <button onclick="modifyVal('${id}', 'hp', -5, ${p.hpMax ?? 9999})" class="bg-red-600 px-2 py-0.5 rounded text-xs">-5</button>
+                                <button onclick="modifyVal('${id}', 'hp', -1, ${p.hpMax ?? 9999})" class="bg-red-500 px-2 py-0.5 rounded text-xs">-1</button>
+                                <button onclick="modifyVal('${id}', 'hp', 1, ${p.hpMax ?? 9999})" class="bg-green-500 px-2 py-0.5 rounded text-xs">+1</button>
+                                <button onclick="modifyVal('${id}', 'hp', 5, ${p.hpMax ?? 9999})" class="bg-green-600 px-2 py-0.5 rounded text-xs">+5</button>
                             </div>
                         </div>
                         <!-- 修為 -->
@@ -82,10 +84,10 @@
                                 <input type="number" value="${p.manaMax ?? 0}" onchange="updateField('${id}', 'manaMax', parseInt(this.value))" class="w-16 bg-slate-800 border border-slate-700 rounded px-2 py-1 text-center text-slate-400">
                             </div>
                             <div class="flex gap-1 flex-wrap">
-                                <button onclick="modifyVal('${id}', 'mana', -5, ${p.manaMax ?? 0})" class="bg-red-600 px-2 py-0.5 rounded text-xs">-5</button>
-                                <button onclick="modifyVal('${id}', 'mana', -1, ${p.manaMax ?? 0})" class="bg-red-500 px-2 py-0.5 rounded text-xs">-1</button>
-                                <button onclick="modifyVal('${id}', 'mana', 1, ${p.manaMax ?? 0})" class="bg-green-500 px-2 py-0.5 rounded text-xs">+1</button>
-                                <button onclick="modifyVal('${id}', 'mana', 5, ${p.manaMax ?? 0})" class="bg-green-600 px-2 py-0.5 rounded text-xs">+5</button>
+                                <button onclick="modifyVal('${id}', 'mana', -5, ${p.manaMax ?? 9999})" class="bg-red-600 px-2 py-0.5 rounded text-xs">-5</button>
+                                <button onclick="modifyVal('${id}', 'mana', -1, ${p.manaMax ?? 9999})" class="bg-red-500 px-2 py-0.5 rounded text-xs">-1</button>
+                                <button onclick="modifyVal('${id}', 'mana', 1, ${p.manaMax ?? 9999})" class="bg-green-500 px-2 py-0.5 rounded text-xs">+1</button>
+                                <button onclick="modifyVal('${id}', 'mana', 5, ${p.manaMax ?? 9999})" class="bg-green-600 px-2 py-0.5 rounded text-xs">+5</button>
                             </div>
                         </div>
                         <!-- 速度 -->
@@ -97,10 +99,10 @@
                                 <input type="number" value="${p.speedMax ?? 0}" onchange="updateField('${id}', 'speedMax', parseInt(this.value))" class="w-16 bg-slate-800 border border-slate-700 rounded px-2 py-1 text-center text-slate-400">
                             </div>
                             <div class="flex gap-1 flex-wrap">
-                                <button onclick="modifyVal('${id}', 'speed', -5, ${p.speedMax ?? 0})" class="bg-red-600 px-2 py-0.5 rounded text-xs">-5</button>
-                                <button onclick="modifyVal('${id}', 'speed', -1, ${p.speedMax ?? 0})" class="bg-red-500 px-2 py-0.5 rounded text-xs">-1</button>
-                                <button onclick="modifyVal('${id}', 'speed', 1, ${p.speedMax ?? 0})" class="bg-green-500 px-2 py-0.5 rounded text-xs">+1</button>
-                                <button onclick="modifyVal('${id}', 'speed', 5, ${p.speedMax ?? 0})" class="bg-green-600 px-2 py-0.5 rounded text-xs">+5</button>
+                                <button onclick="modifyVal('${id}', 'speed', -5, ${p.speedMax ?? 9999})" class="bg-red-600 px-2 py-0.5 rounded text-xs">-5</button>
+                                <button onclick="modifyVal('${id}', 'speed', -1, ${p.speedMax ?? 9999})" class="bg-red-500 px-2 py-0.5 rounded text-xs">-1</button>
+                                <button onclick="modifyVal('${id}', 'speed', 1, ${p.speedMax ?? 9999})" class="bg-green-500 px-2 py-0.5 rounded text-xs">+1</button>
+                                <button onclick="modifyVal('${id}', 'speed', 5, ${p.speedMax ?? 9999})" class="bg-green-600 px-2 py-0.5 rounded text-xs">+5</button>
                             </div>
                         </div>
                         <!-- 攻擊 -->
@@ -112,8 +114,8 @@
                                 <input type="number" value="${p.atkMax ?? 0}" onchange="updateField('${id}', 'atkMax', parseInt(this.value))" class="w-16 bg-slate-800 border border-slate-700 rounded px-2 py-1 text-center text-slate-400">
                             </div>
                             <div class="flex gap-1 flex-wrap">
-                                <button onclick="modifyVal('${id}', 'atk', -1, ${p.atkMax ?? 0})" class="bg-red-500 px-2 py-0.5 rounded text-xs">-1</button>
-                                <button onclick="modifyVal('${id}', 'atk', 1, ${p.atkMax ?? 0})" class="bg-green-500 px-2 py-0.5 rounded text-xs">+1</button>
+                                <button onclick="modifyVal('${id}', 'atk', -1, ${p.atkMax ?? 9999})" class="bg-red-500 px-2 py-0.5 rounded text-xs">-1</button>
+                                <button onclick="modifyVal('${id}', 'atk', 1, ${p.atkMax ?? 9999})" class="bg-green-500 px-2 py-0.5 rounded text-xs">+1</button>
                             </div>
                         </div>
                         <!-- 防禦 -->
@@ -125,8 +127,8 @@
                                 <input type="number" value="${p.defMax ?? 0}" onchange="updateField('${id}', 'defMax', parseInt(this.value))" class="w-16 bg-slate-800 border border-slate-700 rounded px-2 py-1 text-center text-slate-400">
                             </div>
                             <div class="flex gap-1 flex-wrap">
-                                <button onclick="modifyVal('${id}', 'def', -1, ${p.defMax ?? 0})" class="bg-red-500 px-2 py-0.5 rounded text-xs">-1</button>
-                                <button onclick="modifyVal('${id}', 'def', 1, ${p.defMax ?? 0})" class="bg-green-500 px-2 py-0.5 rounded text-xs">+1</button>
+                                <button onclick="modifyVal('${id}', 'def', -1, ${p.defMax ?? 9999})" class="bg-red-500 px-2 py-0.5 rounded text-xs">-1</button>
+                                <button onclick="modifyVal('${id}', 'def', 1, ${p.defMax ?? 9999})" class="bg-green-500 px-2 py-0.5 rounded text-xs">+1</button>
                             </div>
                         </div>
                     </div>
@@ -143,7 +145,7 @@
                         </div>
                     </div>
 
-                    <!-- 技能、裝備與其餘道具資訊 (摺疊或區塊顯示) -->
+                    <!-- 技能、裝備與其餘道具資訊 -->
                     <div class="grid grid-cols-1 md:grid-cols-3 gap-4 text-xs bg-slate-800/30 p-4 rounded-lg">
                         <div>
                             <span class="font-bold text-slate-300 block mb-1">技能資訊：</span>
@@ -181,6 +183,9 @@
                 `;
                 container.appendChild(card);
             });
+        }, (error) => {
+            console.error("Firebase 讀取錯誤:", error);
+            document.getElementById('playersContainer').innerHTML = `<div class="text-center py-10 text-red-500">讀取失敗，請檢查 F12 主控台與 Firebase 權限設定。<br>錯誤訊息：${error.message}</div>`;
         });
 
         // 渲染道具控制元件
@@ -267,10 +272,11 @@
             }, { onlyOnce: true });
         }
 
-        // 建立新角色範本
+        // 建立新角色 (使用 player 開頭的自訂 ID，呼應您的玩家端)
         window.createNewPlayer = function() {
-            const newRef = push(ref(db, 'players'));
-            set(newRef, {
+            const customId = "player" + Math.floor(Math.random() * 900 + 100);
+            const newPlayerRef = ref(db, 'players/' + customId);
+            set(newPlayerRef, {
                 code: "P001",
                 name: "新冒險者",
                 gender: "男",
@@ -288,6 +294,8 @@
                 skills: { race: "被動-強壯", class: "連斬", special: "無", s1: "重擊", s2: "護身", eq1: "裝備技A", eq2: "", eq3: "" },
                 equips: { main: "鐵劍", off: "無", head: "皮帽", neck: "無", body: "皮甲", hand: "無", waist: "無", foot: "皮靴" },
                 otherItems: { "木材": 3 }
+            }).then(() => {
+                alert(`成功建立新角色！其 ID 為：${customId}，可在玩家端網址加上 ?id=${customId} 檢視。`);
             });
         }
     </script>
