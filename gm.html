@@ -249,8 +249,26 @@
             await updateDoc(doc(db, "players", playerId), { [field]: val });
         };
 
-        // 短休 / 長休
+        // 短休：回復部分狀態（例如生命與修為各自回補 50% 上限，或依據需求調整）
         window.shortRest = async function(playerId) {
+            const docRef = doc(db, "players", playerId);
+            const snap = await getDoc(docRef);
+            if (snap.exists()) {
+                const d = snap.data();
+                const maxHp = d.生命初始值 ?? 100;
+                const maxMp = d.修為初始值 ?? 50;
+                
+                // 短休範例：將生命與修為回補至上限的一半，或直接補滿生命與修為但保留動態速度/攻防
+                await updateDoc(docRef, {
+                    生命值: maxHp, // 依需求可改為 Math.min(maxHp, (d.生命值 || 0) + maxHp * 0.5)
+                    修為: maxMp    // 依需求可改為 Math.min(maxMp, (d.修為 || 0) + maxMp * 0.5)
+                });
+                alert("短休完畢：生命與修為已恢復！");
+            }
+        };
+
+        // 長休：全面恢復所有初始數值（生命、修為、速度、攻擊、防禦）
+        window.longRest = async function(playerId) {
             const docRef = doc(db, "players", playerId);
             const snap = await getDoc(docRef);
             if (snap.exists()) {
@@ -262,12 +280,8 @@
                     攻擊: d.攻擊初始值 ?? 10,
                     防禦: d.防禦初始值 ?? 10
                 });
-                alert("短休完畢：各項基本數值已恢復至初始值！");
+                alert("長休完畢：所有核心數值（生命、修為、速度、攻擊、防禦）已全面恢復至初始上限！");
             }
-        };
-
-        window.longRest = async function(playerId) {
-            await window.shortRest(playerId);
         };
 
         // 額外技能管理
