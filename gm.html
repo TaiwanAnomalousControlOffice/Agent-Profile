@@ -1,14 +1,34 @@
-<!-- Firebase Firestore 邏輯 -->
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <title>GM 遊戲管理面板 (Firestore)</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-slate-950 text-slate-100 min-h-screen p-6">
+    <div class="max-w-7xl mx-auto space-y-6">
+        <div class="flex justify-between items-center bg-slate-900 p-4 rounded-xl border border-slate-800">
+            <h1 class="text-3xl font-bold text-amber-400">GM 遊戲管理面板 (Firestore)</h1>
+            <button onclick="createNewPlayer()" class="bg-amber-600 hover:bg-amber-500 px-4 py-2 rounded-lg font-bold">＋ 建立新角色</button>
+        </div>
+
+        <!-- 玩家列表容器 -->
+        <div id="playersContainer" class="space-y-6">
+            <div id="statusMsg" class="text-center py-10 text-slate-400">正在連線至 Firestore 讀取玩家資料...</div>
+        </div>
+    </div>
+
+    <!-- Firebase Firestore 邏輯 -->
     <script type="module">
         import { db } from './firebase-config.js';
         import { collection, onSnapshot, doc, updateDoc, setDoc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
-        const container = document.getElementById('playersContainer');
-
         // 即時監聽 players 集合
         onSnapshot(collection(db, "players"), (snapshot) => {
+            const container = document.getElementById('playersContainer');
+            
             if (snapshot.empty) {
-                container.innerHTML = '<div class="text-center py-10 text-amber-500">資料庫連線成功，但目前集合 (players) 內沒有任何文檔。</div>';
+                container.innerHTML = '<div class="text-center py-10 text-amber-500">目前沒有任何玩家資料。</div>';
                 return;
             }
 
@@ -37,22 +57,38 @@
                     </div>
 
                     <!-- 數值調整區 -->
-                    <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+                    <div class="grid grid-cols-1 md:grid-cols-5 gap-4">
+                        <!-- 生命值 -->
                         <div class="bg-slate-800/50 p-3 rounded-lg border border-slate-700/50">
-                            <div class="text-sm font-bold mb-1 text-slate-300">生命值 (hp)</div>
-                            <input type="number" value="${p.hp ?? 0}" onchange="updateField('${id}', 'hp', parseInt(this.value))" class="w-20 bg-slate-800 border border-slate-700 rounded px-2 py-1 text-center">
+                            <div class="text-sm font-bold mb-1 text-slate-300">生命值 (現/上限)</div>
+                            <div class="flex items-center gap-1 mb-2">
+                                <input type="number" value="${p.hp ?? 0}" onchange="updateField('${id}', 'hp', parseInt(this.value))" class="w-16 bg-slate-800 border border-slate-700 rounded px-2 py-1 text-center">
+                                <span>/</span>
+                                <input type="number" value="${p.hpMax ?? 0}" onchange="updateField('${id}', 'hpMax', parseInt(this.value))" class="w-16 bg-slate-800 border border-slate-700 rounded px-2 py-1 text-center text-slate-400">
+                            </div>
                         </div>
+                        <!-- 修為 -->
                         <div class="bg-slate-800/50 p-3 rounded-lg border border-slate-700/50">
-                            <div class="text-sm font-bold mb-1 text-slate-300">修為</div>
-                            <input type="number" value="${p.修為 ?? 0}" onchange="updateField('${id}', '修為', parseInt(this.value))" class="w-20 bg-slate-800 border border-slate-700 rounded px-2 py-1 text-center">
+                            <div class="text-sm font-bold mb-1 text-slate-300">修為 (現/初始)</div>
+                            <div class="flex items-center gap-1 mb-2">
+                                <input type="number" value="${p.修為 ?? 0}" onchange="updateField('${id}', '修為', parseInt(this.value))" class="w-16 bg-slate-800 border border-slate-700 rounded px-2 py-1 text-center">
+                                <span>/</span>
+                                <input type="number" value="${p.修為初始值 ?? 0}" onchange="updateField('${id}', '修為初始值', parseInt(this.value))" class="w-16 bg-slate-800 border border-slate-700 rounded px-2 py-1 text-center text-slate-400">
+                            </div>
                         </div>
+                        <!-- 封魔匣 -->
                         <div class="bg-slate-800/50 p-3 rounded-lg border border-slate-700/50">
                             <div class="text-sm font-bold mb-1 text-slate-300">封魔匣</div>
-                            <input type="number" value="${p.封魔匣 ?? 0}" onchange="updateField('${id}', '封魔匣', parseInt(this.value))" class="w-20 bg-slate-800 border border-slate-700 rounded px-2 py-1 text-center">
+                            <div class="flex items-center gap-1 mb-2">
+                                <input type="number" value="${p.封魔匣 ?? 0}" onchange="updateField('${id}', '封魔匣', parseInt(this.value))" class="w-20 bg-slate-800 border border-slate-700 rounded px-2 py-1 text-center">
+                            </div>
                         </div>
+                        <!-- 修為恢復藥劑 -->
                         <div class="bg-slate-800/50 p-3 rounded-lg border border-slate-700/50">
                             <div class="text-sm font-bold mb-1 text-slate-300">修為恢復藥劑</div>
-                            <input type="number" value="${p['修為恢復藥劑'] ?? 0}" onchange="updateField('${id}', '修為恢復藥劑', parseInt(this.value))" class="w-20 bg-slate-800 border border-slate-700 rounded px-2 py-1 text-center">
+                            <div class="flex items-center gap-1 mb-2">
+                                <input type="number" value="${p['修為恢復藥劑'] ?? 0}" onchange="updateField('${id}', '修為恢復藥劑', parseInt(this.value))" class="w-20 bg-slate-800 border border-slate-700 rounded px-2 py-1 text-center">
+                            </div>
                         </div>
                     </div>
                 `;
@@ -60,13 +96,7 @@
             });
         }, (error) => {
             console.error("Firestore 讀取錯誤:", error);
-            container.innerHTML = `
-                <div class="bg-red-900/40 border border-red-500 p-6 rounded-xl text-center space-y-2">
-                    <h3 class="text-xl font-bold text-red-400">Firebase 讀取失敗</h3>
-                    <p class="text-sm text-slate-300">錯誤代碼/訊息：${error.message}</p>
-                    <p class="text-xs text-amber-300">這通常是因為 Firestore 規則 (Rules) 沒有設為允許讀寫所導致。</p>
-                </div>
-            `;
+            document.getElementById('playersContainer').innerHTML = `<div class="text-center py-10 text-red-500">讀取失敗：${error.message}，請檢查 Firestore 規則權限。</div>`;
         });
 
         window.updateField = async function(playerId, field, value) {
@@ -75,7 +105,7 @@
                 console.log(`更新成功: ${playerId} -> ${field} = ${value}`);
             } catch (e) {
                 console.error("更新失敗:", e);
-                alert("更新失敗：" + e.message);
+                alert("更新失敗，請檢查權限或控制台。");
             }
         }
 
@@ -89,10 +119,12 @@
                     性別: "男",
                     年齡: 20,
                     修為: 10,
+                    修為初始值: 10,
                     修為恢復藥劑: 2,
                     封魔匣: 1,
                     asset: 10000,
-                    hp: 20
+                    hp: 20,
+                    hpMax: 20
                 });
                 alert("新角色建立成功！");
             } catch (e) {
@@ -101,3 +133,5 @@
             }
         }
     </script>
+</body>
+</html>
