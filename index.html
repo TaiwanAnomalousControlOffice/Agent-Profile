@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TRPG 玩家狀態面板</title>
+    <style>
+        body { font-family: sans-serif; background: #121212; color: #e0e0e0; padding: 20px; max-width: 600px; margin: auto; }
+        .card { background: #1e1e1e; padding: 20px; border-radius: 8px; box-shadow: 0 4px 6px rgba(0,0,0,0.3); }
+        .stat-group { margin-bottom: 15px; }
+        label { display: block; margin-bottom: 5px; font-weight: bold; color: #bb86fc; }
+        input { width: 100%; padding: 8px; background: #2d2d2d; border: 1px solid #444; color: #fff; border-radius: 4px; box-sizing: border-box; }
+        button { background: #bb86fc; color: #121212; border: none; padding: 10px 15px; font-weight: bold; border-radius: 4px; cursor: pointer; margin-top: 10px; }
+        button:hover { background: #9965f4; }
+        .notice { background: #2a2a2a; padding: 10px; border-radius: 4px; margin-bottom: 15px; font-size: 0.9rem; color: #aaa; }
+    </style>
+</head>
+<body>
+
+    <div class="card">
+        <h2 id="player-name">載入中...</h2>
+        <div class="notice" id="player-url-tip"></div>
+        <div id="stats-container"></div>
+        <button id="save-btn">儲存變更</button>
+    </div>
+
+    <script type="module">
+        import { db, doc, onSnapshot, updateDoc } from "./firebase-config.js";
+
+        // 從網址列取得玩家 ID，若沒有則預設為 player01
+        // 例如網址輸入: index.html?id=player02 就能讀取 player02
+        const urlParams = new URLSearchParams(window.location.search);
+        const playerId = urlParams.get('id') || 'player01';
+
+        document.getElementById("player-url-tip").innerText = `目前檢視的玩家代號: ${playerId}`;
+
+        const docRef = doc(db, "players", playerId);
+        const nameEl = document.getElementById("player-name");
+        const container = document.getElementById("stats-container");
+        const saveBtn = document.getElementById("save-btn");
+
+        let localData = {};
+
+        onSnapshot(docRef, (docSnap) => {
+            if (docSnap.exists()) {
+                localData = docSnap.data();
+                renderForm(localData);
+            } else {
+                nameEl.innerText = "找不到該玩家資料";
+                container.innerHTML = `<p style="color:#ff6b6b;">請確認 Firebase 裡面是否有建立 players/${playerId} 這個文件！</p>`;
+            }
+        });
+
+        function renderForm(data) {
+            container.innerHTML = "";
+            nameEl.innerText = `角色: ${data.name || playerId}`;
+
+            for (let [key, value] of Object.entries(data)) {
+                const div = document.createElement("div");
+                div.className = "stat-group";
+                div.innerHTML = `
+                    <label>${key}</label>
+                    <input type="text" id="field-${key}" value="${value}">
+                `;
+                container.appendChild(div);
+            }
+        }
+
+        saveBtn.addEventListener("click", async () => {
+            const updatedData = {};
+            for (let key of Object.keys(localData)) {
+                const input = document.getElementById(`field-${key}`);
+                if (input) {
+                    let val = input.value;
+                    if (!isNaN(val) && val.trim() !== "") {
+                        val = Number(val);
+                    }
+                    updatedData[key] = val;
+                }
+            }
+
+            try {
+                await updateDoc(docRef, updatedData);
+                alert("數據更新成功！");
+            } catch (error) {
+                console.error("更新失敗: ", error);
+                alert("更新失敗，請查看主控台");
+            }
+        });
+    </script>
+</body>
+</html>
