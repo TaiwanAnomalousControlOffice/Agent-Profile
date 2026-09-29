@@ -2,15 +2,14 @@
 <html lang="zh-TW">
 <head>
     <meta charset="UTF-8">
-    <title>TRPG 玩家狀態面板</title>
+    <title>異常管制局探員檔案</title>
     <script src="https://cdn.tailwindcss.com"></script>
 </head>
 <body class="bg-slate-950 text-slate-100 min-h-screen p-4 md:p-6">
     <div class="max-w-4xl mx-auto space-y-6">
-        <!-- 頂部標題 (單一角色模式) -->
-        <div class="flex justify-between items-center bg-slate-900 p-4 rounded-xl border border-slate-800 shadow-lg">
-            <h1 class="text-2xl font-bold text-cyan-400">TRPG 玩家狀態面板</h1>
-            <div id="playerIdDisplay" class="text-xs text-slate-400 font-mono">載入中...</div>
+        <!-- 頂部標題 -->
+        <div class="bg-slate-900 p-4 rounded-xl border border-slate-800 shadow-lg">
+            <h1 class="text-2xl font-bold text-cyan-400">異常管制局探員檔案</h1>
         </div>
 
         <!-- 玩家角色卡片容器 -->
@@ -25,14 +24,10 @@
         import { doc, onSnapshot, updateDoc, getDoc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
         const container = document.getElementById('playerContainer');
-        const idDisplay = document.getElementById('playerIdDisplay');
 
         // 從網址列取得 ID (例如: player.html?id=player01)
-        // 如果網址沒有寫 ?id=xxx，您可以直接在這裡修改預設的 playerId 作為單一頁面專屬角色
         const urlParams = new URLSearchParams(window.location.search);
         const playerId = urlParams.get('id') || 'player01'; 
-
-        idDisplay.textContent = `角色 ID: ${playerId}`;
 
         // 即時監聽該單一角色的資料
         const docRef = doc(db, "players", playerId);
@@ -132,7 +127,7 @@
                         </div>
                     </div>
 
-                    <!-- 技能與裝備資訊 (技能1與2分開，裝備可修改) -->
+                    <!-- 技能與裝備資訊 -->
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs text-slate-300 bg-slate-950/50 p-4 rounded-xl border border-slate-800">
                         <div class="space-y-2">
                             <div class="flex justify-between items-center border-b border-slate-800 pb-1">
@@ -165,7 +160,7 @@
                         </div>
                     </div>
 
-                    <!-- 其餘道具背包 (玩家可填寫增加物品及數量) -->
+                    <!-- 其餘道具背包 -->
                     <div class="space-y-3 bg-slate-950/50 p-4 rounded-xl border border-slate-800">
                         <div class="flex justify-between items-center">
                             <span class="font-bold text-xs text-cyan-400">其餘道具背包</span>
@@ -179,7 +174,6 @@
             `;
         });
 
-        // 消耗品僅減少按鈕
         function renderPlayerItemBox(id, name, val) {
             const count = val ?? 0;
             return `
@@ -191,7 +185,6 @@
             `;
         }
 
-        // 裝備欄位輸入框
         function renderEquipInput(id, slotName, val) {
             const dbField = `裝備_${slotName}`;
             return `
@@ -202,7 +195,6 @@
             `;
         }
 
-        // 額外技能列表
         function renderPlayerExtraSkills(id, skills) {
             if (!skills || skills.length === 0) return '<div class="text-xs text-slate-500">目前無額外技能</div>';
             return skills.map((sk, idx) => `
@@ -224,7 +216,6 @@
             `).join('');
         }
 
-        // 數值增減與欄位更新
         window.adjustValue = async function(playerId, field, delta, currentVal) {
             const newVal = Math.max(0, (currentVal ?? 0) + delta);
             await updateDoc(doc(db, "players", playerId), { [field]: newVal });
@@ -234,7 +225,6 @@
             await updateDoc(doc(db, "players", playerId), { [field]: val });
         };
 
-        // 額外技能管理
         window.addPlayerExtraSkill = async function(playerId) {
             const docRef = doc(db, "players", playerId);
             const snap = await getDoc(docRef);
@@ -265,7 +255,6 @@
             }
         };
 
-        // 其餘道具管理
         window.addPlayerOtherItem = async function(playerId) {
             const docRef = doc(db, "players", playerId);
             const snap = await getDoc(docRef);
