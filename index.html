@@ -2,173 +2,308 @@
 <html lang="zh-TW">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>TRPG 玩家狀態面板</title>
-    <style>
-        body { font-family: sans-serif; background: #121212; color: #e0e0e0; padding: 20px; max-width: 700px; margin: auto; }
-        .card { background: #1e1e1e; padding: 20px; border-radius: 8px; box-shadow: 0 4px 6px rgba(0,0,0,0.3); margin-bottom: 20px; }
-        .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 15px; }
-        .stat-box { background: #2d2d2d; padding: 10px; border-radius: 6px; }
-        label { display: block; margin-bottom: 5px; font-weight: bold; color: #bb86fc; font-size: 0.9rem; }
-        input { width: 100%; padding: 8px; background: #3d3d3d; border: 1px solid #555; color: #fff; border-radius: 4px; box-sizing: border-box; }
-        button { background: #bb86fc; color: #121212; border: none; padding: 8px 12px; font-weight: bold; border-radius: 4px; cursor: pointer; margin-top: 5px; }
-        button:hover { background: #9965f4; }
-        .btn-danger { background: #cf6679; color: #fff; }
-        .btn-danger:hover { background: #b04658; }
-        img.avatar { width: 80px; height: 80px; border-radius: 50%; object-fit: cover; float: right; border: 2px solid #bb86fc; }
-        h2 { margin-top: 0; }
-        hr { border: 0; border-top: 1px solid #444; margin: 15px 0; }
-    </style>
+    <title>玩家角色面板</title>
+    <script src="https://cdn.tailwindcss.com"></script>
 </head>
-<body>
+<body class="bg-slate-900 text-slate-100 min-h-screen p-4">
+    <div class="max-w-4xl mx-auto bg-slate-800 rounded-xl shadow-lg p-6 border border-slate-700">
+        <h1 class="text-2xl font-bold mb-6 text-center text-cyan-400">玩家冒險者面板</h1>
+        
+        <!-- 載入中 / 錯誤訊息 -->
+        <div id="loading" class="text-center py-10 text-xl">讀取角色資料中...</div>
+        <div id="app" class="hidden space-y-6">
+            
+            <!-- 基本資訊區 -->
+            <div class="flex flex-col md:flex-row items-center gap-6 bg-slate-700/50 p-4 rounded-lg">
+                <img id="avatar" src="" alt="頭像" class="w-24 h-24 rounded-full object-cover border-2 border-cyan-400">
+                <div class="grid grid-cols-2 md:grid-cols-4 gap-4 w-full text-sm">
+                    <div><span class="text-slate-400">代號：</span><span id="code" class="font-semibold"></span></div>
+                    <div><span class="text-slate-400">姓名：</span><span id="name" class="font-semibold"></span></div>
+                    <div><span class="text-slate-400">性別：</span><span id="gender"></span></div>
+                    <div><span class="text-slate-400">年齡：</span><span id="age"></span></div>
+                    <div><span class="text-slate-400">種族：</span><span id="race"></span></div>
+                    <div><span class="text-slate-400">職業：</span><span id="class"></span></div>
+                    <div><span class="text-slate-400">資產：</span><span id="asset" class="text-yellow-400 font-bold"></span> 錢</div>
+                </div>
+            </div>
 
-    <div class="card">
-        <img id="player-avatar" class="avatar" src="" alt="頭像" onerror="this.style.display='none'">
-        <h2 id="player-title">載入中...</h2>
-        <p id="player-info" style="color: #aaa; font-size: 0.9rem;"></p>
-        <div id="status-tip" style="color: #38bdf8; font-size: 0.85rem; margin-bottom: 10px;"></div>
-    </div>
+            <!-- 核心數值區 -->
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <!-- 生命值 -->
+                <div class="bg-slate-700 p-4 rounded-lg">
+                    <div class="flex justify-between mb-2">
+                        <span class="font-bold">生命值</span>
+                        <span><span id="hp"></span> / <span id="hpMax"></span></span>
+                    </div>
+                    <div class="flex gap-1">
+                        <button onclick="updateValue('hp', -5)" class="bg-red-600 px-2 py-1 rounded text-sm">-5</button>
+                        <button onclick="updateValue('hp', -1)" class="bg-red-500 px-2 py-1 rounded text-sm">-1</button>
+                        <button onclick="updateValue('hp', 1)" class="bg-green-500 px-2 py-1 rounded text-sm">+1</button>
+                        <button onclick="updateValue('hp', 5)" class="bg-green-600 px-2 py-1 rounded text-sm">+5</button>
+                    </div>
+                </div>
+                <!-- 修為 -->
+                <div class="bg-slate-700 p-4 rounded-lg">
+                    <div class="flex justify-between mb-2">
+                        <span class="font-bold">修為</span>
+                        <span><span id="mana"></span> / <span id="manaMax"></span></span>
+                    </div>
+                    <div class="flex gap-1">
+                        <button onclick="updateValue('mana', -5)" class="bg-red-600 px-2 py-1 rounded text-sm">-5</button>
+                        <button onclick="updateValue('mana', -1)" class="bg-red-500 px-2 py-1 rounded text-sm">-1</button>
+                        <button onclick="updateValue('mana', 1)" class="bg-green-500 px-2 py-1 rounded text-sm">+1</button>
+                        <button onclick="updateValue('mana', 5)" class="bg-green-600 px-2 py-1 rounded text-sm">+5</button>
+                    </div>
+                </div>
+                <!-- 速度 -->
+                <div class="bg-slate-700 p-4 rounded-lg">
+                    <div class="flex justify-between mb-2">
+                        <span class="font-bold">速度</span>
+                        <span><span id="speed"></span> / <span id="speedMax"></span></span>
+                    </div>
+                    <div class="flex gap-1">
+                        <button onclick="updateValue('speed', -5)" class="bg-red-600 px-2 py-1 rounded text-sm">-5</button>
+                        <button onclick="updateValue('speed', -1)" class="bg-red-500 px-2 py-1 rounded text-sm">-1</button>
+                        <button onclick="updateValue('speed', 1)" class="bg-green-500 px-2 py-1 rounded text-sm">+1</button>
+                        <button onclick="updateValue('speed', 5)" class="bg-green-600 px-2 py-1 rounded text-sm">+5</button>
+                    </div>
+                </div>
+                <!-- 攻擊 -->
+                <div class="bg-slate-700 p-4 rounded-lg">
+                    <div class="flex justify-between mb-2">
+                        <span class="font-bold">攻擊</span>
+                        <span><span id="atk"></span> / <span id="atkMax"></span></span>
+                    </div>
+                    <div class="flex gap-1">
+                        <button onclick="updateValue('atk', -1)" class="bg-red-500 px-2 py-1 rounded text-sm">-1</button>
+                        <button onclick="updateValue('atk', 1)" class="bg-green-500 px-2 py-1 rounded text-sm">+1</button>
+                    </div>
+                </div>
+                <!-- 防禦 -->
+                <div class="bg-slate-700 p-4 rounded-lg">
+                    <div class="flex justify-between mb-2">
+                        <span class="font-bold">防禦</span>
+                        <span><span id="def"></span> / <span id="defMax"></span></span>
+                    </div>
+                    <div class="flex gap-1">
+                        <button onclick="updateValue('def', -1)" class="bg-red-500 px-2 py-1 rounded text-sm">-1</button>
+                        <button onclick="updateValue('def', 1)" class="bg-green-500 px-2 py-1 rounded text-sm">+1</button>
+                    </div>
+                </div>
+            </div>
 
-    <!-- 戰鬥屬性 -->
-    <div class="card">
-        <h3>⚔️ 戰鬥與狀態</h3>
-        <div class="grid" id="stats-grid"></div>
-    </div>
+            <!-- 特殊道具區 -->
+            <div class="bg-slate-700 p-4 rounded-lg">
+                <h3 class="font-bold mb-3 text-cyan-300">特殊道具與消耗品</h3>
+                <div class="grid grid-cols-2 md:grid-cols-5 gap-3">
+                    <div class="bg-slate-800 p-3 rounded text-center">
+                        <div class="text-sm text-slate-400">高效治療繃帶</div>
+                        <div id="item_bandage" class="text-xl font-bold my-1">0</div>
+                        <button onclick="updateItem('bandage', -1)" class="bg-red-600 text-xs px-2 py-1 rounded w-full">使用 (-1)</button>
+                    </div>
+                    <div class="bg-slate-800 p-3 rounded text-center">
+                        <div class="text-sm text-slate-400">修為恢復藥劑</div>
+                        <div id="item_manaPotion" class="text-xl font-bold my-1">0</div>
+                        <button onclick="updateItem('manaPotion', -1)" class="bg-red-600 text-xs px-2 py-1 rounded w-full">使用 (-1)</button>
+                    </div>
+                    <div class="bg-slate-800 p-3 rounded text-center">
+                        <div class="text-sm text-slate-400">異常解除錠</div>
+                        <div id="item_curePill" class="text-xl font-bold my-1">0</div>
+                        <button onclick="updateItem('curePill', -1)" class="bg-red-600 text-xs px-2 py-1 rounded w-full">使用 (-1)</button>
+                    </div>
+                    <div class="bg-slate-800 p-3 rounded text-center">
+                        <div class="text-sm text-slate-400">解咒符</div>
+                        <div id="item_dispelTalisman" class="text-xl font-bold my-1">0</div>
+                        <button onclick="updateItem('dispelTalisman', -1)" class="bg-red-600 text-xs px-2 py-1 rounded w-full">使用 (-1)</button>
+                    </div>
+                    <div class="bg-slate-800 p-3 rounded text-center">
+                        <div class="text-sm text-slate-400">封魔匣</div>
+                        <div id="item_sealBox" class="text-xl font-bold my-1">0</div>
+                        <button onclick="updateItem('sealBox', -1)" class="bg-red-600 text-xs px-2 py-1 rounded w-full">使用 (-1)</button>
+                    </div>
+                </div>
+            </div>
 
-    <!-- 常用道具 -->
-    <div class="card">
-        <h3>🎒 常用道具 (點擊消耗)</h3>
-        <div class="grid" id="items-grid"></div>
-        <hr>
-        <h4>➕ 新增自訂道具</h4>
-        <div style="display: flex; gap: 10px;">
-            <input type="text" id="custom-item-name" placeholder="輸入道具名稱">
-            <button id="add-custom-item-btn">新增</button>
+            <!-- 技能與裝備區 -->
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div class="bg-slate-700 p-4 rounded-lg space-y-2 text-sm">
+                    <h3 class="font-bold text-cyan-300">技能資訊</h3>
+                    <div><span class="text-slate-400">技能:種族：</span><span id="skill_race"></span></div>
+                    <div><span class="text-slate-400">技能:職業：</span><span id="skill_class"></span></div>
+                    <div><span class="text-slate-400">技能:特殊：</span><span id="skill_special"></span></div>
+                    <div><span class="text-slate-400">技能1：</span><span id="skill_1"></span></div>
+                    <div><span class="text-slate-400">技能2：</span><span id="skill_2"></span></div>
+                    <div><span class="text-slate-400">裝備技能1：</span><span id="eq_skill_1"></span></div>
+                    <div><span class="text-slate-400">裝備技能2：</span><span id="eq_skill_2"></span></div>
+                    <div><span class="text-slate-400">裝備技能3：</span><span id="eq_skill_3"></span></div>
+                </div>
+                <div class="bg-slate-700 p-4 rounded-lg space-y-2 text-sm">
+                    <h3 class="font-bold text-cyan-300">裝備資訊</h3>
+                    <div><span class="text-slate-400">主手：</span><span id="equip_main"></span></div>
+                    <div><span class="text-slate-400">副手：</span><span id="equip_off"></span></div>
+                    <div><span class="text-slate-400">頭部：</span><span id="equip_head"></span></div>
+                    <div><span class="text-slate-400">頸部：</span><span id="equip_neck"></span></div>
+                    <div><span class="text-slate-400">身體：</span><span id="equip_body"></span></div>
+                    <div><span class="text-slate-400">手部：</span><span id="equip_hand"></span></div>
+                    <div><span class="text-slate-400">腰部：</span><span id="equip_waist"></span></div>
+                    <div><span class="text-slate-400">腳部：</span><span id="equip_foot"></span></div>
+                </div>
+            </div>
+
+            <!-- 其餘道具區 -->
+            <div class="bg-slate-700 p-4 rounded-lg">
+                <h3 class="font-bold mb-3 text-cyan-300">其餘道具背包</h3>
+                <div class="flex gap-2 mb-3">
+                    <input type="text" id="newItemName" placeholder="道具名稱" class="bg-slate-800 px-3 py-1 rounded border border-slate-600 flex-1">
+                    <input type="number" id="newItemQty" value="1" min="1" class="bg-slate-800 px-3 py-1 rounded border border-slate-600 w-20">
+                    <button onclick="addOtherItem()" class="bg-cyan-600 px-4 py-1 rounded font-bold hover:bg-cyan-500">新增道具</button>
+                </div>
+                <div id="otherItemsList" class="space-y-2"></div>
+            </div>
+
         </div>
-        <div id="custom-items-list" style="margin-top: 10px;"></div>
     </div>
 
-    <div class="card">
-        <button id="save-btn" style="width: 100%; padding: 12px; font-size: 1rem;">儲存所有變更</button>
-    </div>
-
+    <!-- Firebase 邏輯 -->
     <script type="module">
-        import { db, doc, onSnapshot, updateDoc } from "./firebase-config.js";
+        import { db } from './firebase-config.js';
+        import { ref, onValue, update } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js";
 
         const urlParams = new URLSearchParams(window.location.search);
-        const playerId = urlParams.get('id') || 'player01';
-        document.getElementById("status-tip").innerText = `目前連結身分代號: ${playerId}`;
+        const playerId = urlParams.get('id');
 
-        const docRef = doc(db, "players", playerId);
-        let localData = {};
+        if (!playerId) {
+            document.getElementById('loading').innerText = '錯誤：未指定玩家 ID (請在網址加上 ?id=玩家編號)';
+        } else {
+            const playerRef = ref(db, 'players/' + playerId);
 
-        onSnapshot(docRef, (docSnap) => {
-            if (docSnap.exists()) {
-                localData = docSnap.data();
-                renderPage(localData);
-            } else {
-                document.getElementById("player-title").innerText = "找不到該玩家資料";
-            }
-        });
+            onValue(playerRef, (snapshot) => {
+                const data = snapshot.val();
+                if (!data) {
+                    document.getElementById('loading').innerText = '找不到此玩家資料';
+                    return;
+                }
 
-        function renderPage(data) {
-            // 基本資訊
-            document.getElementById("player-avatar").src = data.頭像 || "";
-            document.getElementById("player-title").innerText = `${data.姓名 || '未命名'} (${data.代號 || '無代號'})`;
-            document.getElementById("player-info").innerText = `種族: ${data.種族 || '-'} | 職業: ${data.職業 || '-'} | 性別: ${data.性別 || '-'} | 年齡: ${data.年齡 || '-'} | 資產: 💰 ${data.資產 || 0}`;
+                document.getElementById('loading').classList.add('hidden');
+                document.getElementById('app').classList.remove('hidden');
 
-            // 戰鬥屬性 (生命值、修為、速度、攻擊、防禦)
-            const statsGrid = document.getElementById("stats-grid");
-            statsGrid.innerHTML = "";
-            const statKeys = [
-                { cur: "生命值", max: "生命初始值" },
-                { cur: "修為", max: "修為初始值" },
-                { cur: "速度", max: "速度初始值" },
-                { cur: "攻擊", max: "攻擊初始值" },
-                { cur: "防禦", max: "防禦初始值" }
-            ];
+                // 綁定基本資料
+                document.getElementById('avatar').src = data.avatar || '';
+                document.getElementById('code').innerText = data.code || '';
+                document.getElementById('name').innerText = data.name || '';
+                document.getElementById('gender').innerText = data.gender || '';
+                document.getElementById('age').innerText = data.age || '';
+                document.getElementById('race').innerText = data.race || '';
+                document.getElementById('class').innerText = data.class || '';
+                document.getElementById('asset').innerText = data.asset || 0;
 
-            statKeys.forEach(s => {
-                // 就算 Firebase 欄位還沒建，也給預設值 0 避免 undefined
-                const curVal = data[s.cur] !== undefined ? data[s.cur] : 0;
-                const maxVal = data[s.max] !== undefined ? data[s.max] : 0;
+                // 數值
+                document.getElementById('hp').innerText = data.hp ?? 0;
+                document.getElementById('hpMax').innerText = data.hpMax ?? 0;
+                document.getElementById('mana').innerText = data.mana ?? 0;
+                document.getElementById('manaMax').innerText = data.manaMax ?? 0;
+                document.getElementById('speed').innerText = data.speed ?? 0;
+                document.getElementById('speedMax').innerText = data.speedMax ?? 0;
+                document.getElementById('atk').innerText = data.atk ?? 0;
+                document.getElementById('atkMax').innerText = data.atkMax ?? 0;
+                document.getElementById('def').innerText = data.def ?? 0;
+                document.getElementById('defMax').innerText = data.defMax ?? 0;
 
-                const div = document.createElement("div");
-                div.className = "stat-box";
-                div.innerHTML = `
-                    <label>${s.cur} (上限: ${maxVal})</label>
-                    <input type="number" id="input-${s.cur}" value="${curVal}">
-                `;
-                statsGrid.appendChild(div);
-            });
+                // 特殊道具
+                document.getElementById('item_bandage').innerText = data.items?.bandage ?? 0;
+                document.getElementById('item_manaPotion').innerText = data.items?.manaPotion ?? 0;
+                document.getElementById('item_curePill').innerText = data.items?.curePill ?? 0;
+                document.getElementById('item_dispelTalisman').innerText = data.items?.dispelTalisman ?? 0;
+                document.getElementById('item_sealBox').innerText = data.items?.sealBox ?? 0;
 
-            // 常用道具對應你的 Firebase 實際欄位名稱 (繃帶、修為恢復藥劑、異常解錠、解咒符、封魔匣)
-            const itemsGrid = document.getElementById("items-grid");
-            itemsGrid.innerHTML = "";
-            const itemKeys = [
-                { key: "繃帶", label: "繃帶" },
-                { key: "修為恢復藥劑", label: "修為恢復藥劑" },
-                { key: "異常解錠", label: "異常解錠" },
-                { key: "解咒符", label: "解咒符" },
-                { key: "封魔匣", label: "封魔匣" }
-            ];
+                // 技能與裝備
+                document.getElementById('skill_race').innerText = data.skills?.race || '-';
+                document.getElementById('skill_class').innerText = data.skills?.class || '-';
+                document.getElementById('skill_special').innerText = data.skills?.special || '-';
+                document.getElementById('skill_1').innerText = data.skills?.s1 || '-';
+                document.getElementById('skill_2').innerText = data.skills?.s2 || '-';
+                document.getElementById('eq_skill_1').innerText = data.skills?.eq1 || '-';
+                document.getElementById('eq_skill_2').innerText = data.skills?.eq2 || '-';
+                document.getElementById('eq_skill_3').innerText = data.skills?.eq3 || '-';
 
-            itemKeys.forEach(item => {
-                const count = data[item.key] !== undefined ? data[item.key] : 0;
-                const div = document.createElement("div");
-                div.className = "stat-box";
-                div.innerHTML = `
-                    <label>${item.label}: <span id="val-${item.key}">${count}</span></label>
-                    <button class="btn-danger" onclick="useItem('${item.key}')">使用 / 減少 1 個</button>
-                `;
-                itemsGrid.appendChild(div);
-            });
+                document.getElementById('equip_main').innerText = data.equips?.main || '-';
+                document.getElementById('equip_off').innerText = data.equips?.off || '-';
+                document.getElementById('equip_head').innerText = data.equips?.head || '-';
+                document.getElementById('equip_neck').innerText = data.equips?.neck || '-';
+                document.getElementById('equip_body').innerText = data.equips?.body || '-';
+                document.getElementById('equip_hand').innerText = data.equips?.hand || '-';
+                document.getElementById('equip_waist').innerText = data.equips?.waist || '-';
+                document.getElementById('equip_foot').innerText = data.equips?.foot || '-';
 
-            // 其餘道具
-            renderCustomItems(data["其餘道具"] || []);
-        }
-
-        // 扣減道具
-        window.useItem = async (itemKey) => {
-            if (localData[itemKey] && localData[itemKey] > 0) {
-                localData[itemKey] -= 1;
-                await updateDoc(docRef, { [itemKey]: localData[itemKey] });
-            } else {
-                alert("道具數量不足！");
-            }
-        };
-
-        function renderCustomItems(itemsArray) {
-            const container = document.getElementById("custom-items-list");
-            container.innerHTML = "<strong>其餘道具清單：</strong><br>";
-            if (!itemsArray || itemsArray === "" || (Array.isArray(itemsArray) && itemsArray.length === 0)) {
-                container.innerHTML += "<span style='color:#777;'>無</span>";
-                return;
-            }
-            // 兼容字串或陣列
-            let list = Array.isArray(itemsArray) ? itemsArray : [itemsArray];
-            list.forEach((item, index) => {
-                container.innerHTML += `<span style="display:inline-block; background:#333; padding:4px 8px; margin:4px; border-radius:4px;">${item}</span>`;
+                // 其餘道具列表
+                const otherList = document.getElementById('otherItemsList');
+                otherList.innerHTML = '';
+                if (data.otherItems) {
+                    Object.entries(data.otherItems).forEach(([itemName, qty]) => {
+                        otherList.innerHTML += `
+                            <div class="flex justify-between items-center bg-slate-800 px-3 py-2 rounded">
+                                <span>${itemName} (數量: ${qty})</span>
+                                <button onclick="updateOtherItem('${itemName}', -1)" class="bg-red-600 text-xs px-2 py-1 rounded">使用 (-1)</button>
+                            </div>
+                        `;
+                    });
+                }
             });
         }
 
-        // 儲存按鈕
-        document.getElementById("save-btn").addEventListener("click", async () => {
-            const updatedData = {};
-            const statKeys = ["生命值", "修為", "速度", "攻擊", "防禦"];
-            statKeys.forEach(key => {
-                const input = document.getElementById(`input-${key}`);
-                if (input) updatedData[key] = Number(input.value);
-            });
+        // 數值增減全域函式
+        window.updateValue = function(field, amount) {
+            const currentVal = parseInt(document.getElementById(field).innerText) || 0;
+            const maxVal = parseInt(document.getElementById(field + 'Max').innerText) || 9999;
+            let newVal = currentVal + amount;
+            if (newVal < 0) newVal = 0;
+            if (newVal > maxVal) newVal = maxVal;
 
-            try {
-                await updateDoc(docRef, updatedData);
-                alert("數值儲存成功！");
-            } catch (error) {
-                console.error(error);
-                alert("儲存失敗");
-            }
-        });
+            update(ref(db, 'players/' + playerId), { [field]: newVal });
+        }
+
+        // 消耗品增減全域函式
+        window.updateItem = function(itemKey, amount) {
+            const current = parseInt(document.getElementById('item_' + itemKey).innerText) || 0;
+            let newVal = current + amount;
+            if (newVal < 0) newVal = 0;
+
+            update(ref(db, 'players/' + playerId + '/items'), { [itemKey]: newVal });
+        }
+
+        // 新增其餘道具
+        window.addOtherItem = function() {
+            const name = document.getElementById('newItemName').value.trim();
+            const qty = parseInt(document.getElementById('newItemQty').value) || 1;
+            if (!name) return alert('請輸入道具名稱');
+
+            // 取得現有道具後累加或新增
+            const playerRef = ref(db, 'players/' + playerId);
+            onValue(playerRef, (snapshot) => {
+                const data = snapshot.val();
+                let otherItems = data.otherItems || {};
+                otherItems[name] = (otherItems[name] || 0) + qty;
+                update(ref(db, 'players/' + playerId), { otherItems });
+            }, { onlyOnce: true });
+
+            document.getElementById('newItemName').value = '';
+        }
+
+        // 使用/減少其餘道具
+        window.updateOtherItem = function(name, amount) {
+            const playerRef = ref(db, 'players/' + playerId);
+            onValue(playerRef, (snapshot) => {
+                const data = snapshot.val();
+                let otherItems = data.otherItems || {};
+                if (otherItems[name]) {
+                    otherItems[name] += amount;
+                    if (otherItems[name] <= 0) {
+                        delete otherItems[name];
+                    }
+                    update(ref(db, 'players/' + playerId), { otherItems });
+                }
+            }, { onlyOnce: true });
+        }
     </script>
 </body>
 </html>
