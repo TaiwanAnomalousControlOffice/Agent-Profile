@@ -5,86 +5,177 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>TRPG 玩家狀態面板</title>
     <style>
-        body { font-family: sans-serif; background: #121212; color: #e0e0e0; padding: 20px; max-width: 600px; margin: auto; }
-        .card { background: #1e1e1e; padding: 20px; border-radius: 8px; box-shadow: 0 4px 6px rgba(0,0,0,0.3); }
-        .stat-group { margin-bottom: 15px; }
-        label { display: block; margin-bottom: 5px; font-weight: bold; color: #bb86fc; }
-        input { width: 100%; padding: 8px; background: #2d2d2d; border: 1px solid #444; color: #fff; border-radius: 4px; box-sizing: border-box; }
-        button { background: #bb86fc; color: #121212; border: none; padding: 10px 15px; font-weight: bold; border-radius: 4px; cursor: pointer; margin-top: 10px; }
+        body { font-family: sans-serif; background: #121212; color: #e0e0e0; padding: 20px; max-width: 700px; margin: auto; }
+        .card { background: #1e1e1e; padding: 20px; border-radius: 8px; box-shadow: 0 4px 6px rgba(0,0,0,0.3); margin-bottom: 20px; }
+        .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 15px; }
+        .stat-box { background: #2d2d2d; padding: 10px; border-radius: 6px; }
+        label { display: block; margin-bottom: 5px; font-weight: bold; color: #bb86fc; font-size: 0.9rem; }
+        input, select { width: 100%; padding: 8px; background: #3d3d3d; border: 1px solid #555; color: #fff; border-radius: 4px; box-sizing: border-box; }
+        button { background: #bb86fc; color: #121212; border: none; padding: 8px 12px; font-weight: bold; border-radius: 4px; cursor: pointer; margin-top: 5px; }
         button:hover { background: #9965f4; }
-        .notice { background: #2a2a2a; padding: 10px; border-radius: 4px; margin-bottom: 15px; font-size: 0.9rem; color: #aaa; }
+        .btn-danger { background: #cf6679; color: #fff; }
+        .btn-danger:hover { background: #b04658; }
+        img.avatar { width: 80px; height: 80px; border-radius: 50%; object-fit: cover; float: right; border: 2px solid #bb86fc; }
+        h2 { margin-top: 0; }
+        hr { border: 0; border-top: 1px solid #444; margin: 15px 0; }
     </style>
 </head>
 <body>
 
     <div class="card">
-        <h2 id="player-name">載入中...</h2>
-        <div class="notice" id="player-url-tip"></div>
-        <div id="stats-container"></div>
-        <button id="save-btn">儲存變更</button>
+        <img id="player-avatar" class="avatar" src="" alt="頭像">
+        <h2 id="player-title">載入中...</h2>
+        <p id="player-info" style="color: #aaa; font-size: 0.9rem;"></p>
+        <div id="status-tip" style="color: #38bdf8; font-size: 0.85rem; margin-bottom: 10px;"></div>
+    </div>
+
+    <!-- 戰鬥屬性 -->
+    <div class="card">
+        <h3>⚔️ 戰鬥與狀態</h3>
+        <div class="grid" id="stats-grid"></div>
+    </div>
+
+    <!-- 常用道具 -->
+    <div class="card">
+        <h3>🎒 常用道具 (點擊消耗)</h3>
+        <div class="grid" id="items-grid"></div>
+        <hr>
+        <h4>➕ 新增自訂道具</h4>
+        <div style="display: flex; gap: 10px;">
+            <input type="text" id="custom-item-name" placeholder="輸入道具名稱 (例如: 特製回血散)">
+            <button id="add-custom-item-btn">新增</button>
+        </div>
+        <div id="custom-items-list" style="margin-top: 10px;"></div>
+    </div>
+
+    <div class="card">
+        <button id="save-btn" style="width: 100%; padding: 12px; font-size: 1rem;">儲存所有變更</button>
     </div>
 
     <script type="module">
         import { db, doc, onSnapshot, updateDoc } from "./firebase-config.js";
 
-        // 從網址列取得玩家 ID，若沒有則預設為 player01
-        // 例如網址輸入: index.html?id=player02 就能讀取 player02
         const urlParams = new URLSearchParams(window.location.search);
         const playerId = urlParams.get('id') || 'player01';
-
-        document.getElementById("player-url-tip").innerText = `目前檢視的玩家代號: ${playerId}`;
+        document.getElementById("status-tip").innerText = `目前連結身分代號: ${playerId}`;
 
         const docRef = doc(db, "players", playerId);
-        const nameEl = document.getElementById("player-name");
-        const container = document.getElementById("stats-container");
-        const saveBtn = document.getElementById("save-btn");
-
         let localData = {};
 
         onSnapshot(docRef, (docSnap) => {
             if (docSnap.exists()) {
                 localData = docSnap.data();
-                renderForm(localData);
+                renderPage(localData);
             } else {
-                nameEl.innerText = "找不到該玩家資料";
-                container.innerHTML = `<p style="color:#ff6b6b;">請確認 Firebase 裡面是否有建立 players/${playerId} 這個文件！</p>`;
+                document.getElementById("player-title").innerText = "找不到該玩家資料";
             }
         });
 
-        function renderForm(data) {
-            container.innerHTML = "";
-            nameEl.innerText = `角色: ${data.name || playerId}`;
+        function renderPage(data) {
+            // 基本資訊
+            document.getElementById("player-avatar").src = data.頭像 || "";
+            document.getElementById("player-title").innerText = `${data.姓名 || playerId} (${data.代號 || ''})`;
+            document.getElementById("player-info").innerText = `種族: ${data.種族 || '-'} | 職業: ${data.職業 || '-'} | 性別: ${data.性別 || '-'} | 年齡: ${data.年齡 || '-'} | 資產: 💰 ${data.資產 || 0}`;
 
-            for (let [key, value] of Object.entries(data)) {
-                const div = document.createElement("div");
-                div.className = "stat-group";
-                div.innerHTML = `
-                    <label>${key}</label>
-                    <input type="text" id="field-${key}" value="${value}">
-                `;
-                container.appendChild(div);
-            }
+            // 戰鬥屬性 (生命、修為、速度、攻擊、防禦 及其初始值)
+            const statsGrid = document.getElementById("stats-grid");
+            statsGrid.innerHTML = "";
+            const statKeys = [
+                { cur: "生命值", max: "生命初始值" },
+                { cur: "修為", max: "修為初始值" },
+                { cur: "速度", max: "速度初始值" },
+                { cur: "攻擊", max: "攻擊初始值" },
+                { cur: "防禦", max: "防禦初始值" }
+            ];
+
+            statKeys.forEach(s => {
+                if (data[s.cur] !== undefined) {
+                    const div = document.createElement("div");
+                    div.className = "stat-box";
+                    div.innerHTML = `
+                        <label>${s.cur} (上限/初始: ${data[s.max] || 0})</label>
+                        <input type="number" id="input-${s.cur}" value="${data[s.cur]}">
+                    `;
+                    statsGrid.appendChild(div);
+                }
+            });
+
+            // 常用道具 (高效治療繃帶、修為恢復藥劑、異常解除錠、解咒符、封魔匣)
+            const itemsGrid = document.getElementById("items-grid");
+            itemsGrid.innerHTML = "";
+            const itemKeys = ["高效治療繃帶", "修為恢復藥劑", "異常解除錠", "解咒符", "封魔匣"];
+
+            itemKeys.forEach(item => {
+                if (data[item] !== undefined) {
+                    const div = document.createElement("div");
+                    div.className = "stat-box";
+                    div.innerHTML = `
+                        <label>${item}: <span id="val-${item}">${data[item]}</span></label>
+                        <button class="btn-danger" onclick="useItem('${item}')">使用 / 減少 1 個</button>
+                    `;
+                    itemsGrid.appendChild(div);
+                }
+            });
+
+            // 自訂道具清單（其餘道具欄位）
+            renderCustomItems(data["其餘道具"] || []);
         }
 
-        saveBtn.addEventListener("click", async () => {
-            const updatedData = {};
-            for (let key of Object.keys(localData)) {
-                const input = document.getElementById(`field-${key}`);
-                if (input) {
-                    let val = input.value;
-                    if (!isNaN(val) && val.trim() !== "") {
-                        val = Number(val);
-                    }
-                    updatedData[key] = val;
-                }
+        // 快捷使用道具
+        window.useItem = async (itemName) => {
+            if (localData[itemName] && localData[itemName] > 0) {
+                localData[itemName] -= 1;
+                // 直接同步到資料庫
+                await updateDoc(docRef, { [itemName]: localData[itemName] });
+            } else {
+                alert("道具數量不足！");
             }
+        };
+
+        function renderCustomItems(itemsArray) {
+            const container = document.getElementById("custom-items-list");
+            container.innerHTML = "<strong>自訂道具清單：</strong><br>";
+            if (!Array.isArray(itemsArray) || itemsArray.length === 0) {
+                container.innerHTML += "<span style='color:#777;'>無自訂道具</span>";
+                return;
+            }
+            itemsArray.forEach((item, index) => {
+                container.innerHTML += `<span style="display:inline-block; background:#333; padding:4px 8px; margin:4px; border-radius:4px;">${item} <button onclick="removeCustomItem(${index})" style="background:none; border:none; color:#ff6b6b; cursor:pointer;">✖</button></span>`;
+            });
+        }
+
+        window.removeCustomItem = async (index) => {
+            let items = localData["其餘道具"] || [];
+            items.splice(index, 1);
+            await updateDoc(docRef, { "其餘道具": items });
+        };
+
+        // 新增自訂道具按鈕
+        document.getElementById("add-custom-item-btn").addEventListener("click", async () => {
+            const input = document.getElementById("custom-item-name");
+            const val = input.value.trim();
+            if (!val) return;
+            let items = localData["其餘道具"] || [];
+            items.push(val);
+            await updateDoc(docRef, { "其餘道具": items });
+            input.value = "";
+        });
+
+        // 儲存按鈕
+        document.getElementById("save-btn").addEventListener("click", async () => {
+            const updatedData = {};
+            const statKeys = ["生命值", "修為", "速度", "攻擊", "防禦"];
+            statKeys.forEach(key => {
+                const input = document.getElementById(`input-${key}`);
+                if (input) updatedData[key] = Number(input.value);
+            });
 
             try {
                 await updateDoc(docRef, updatedData);
-                alert("數據更新成功！");
+                alert("數值儲存成功！");
             } catch (error) {
-                console.error("更新失敗: ", error);
-                alert("更新失敗，請查看主控台");
+                console.error(error);
+                alert("儲存失敗");
             }
         });
     </script>
