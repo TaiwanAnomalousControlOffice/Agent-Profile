@@ -40,11 +40,13 @@
                     const card = document.createElement('div');
                     card.className = "bg-slate-900 border border-slate-800 rounded-xl p-6 shadow-2xl space-y-6";
                     
+                    const avatarUrl = p.頭像 || p.avatar || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80';
+
                     card.innerHTML = `
                         <!-- 1. 基本資料與長短休區 -->
                         <div class="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4 border-b border-slate-800 pb-4">
                             <div class="flex items-center gap-4">
-                                <img src="${p.頭像 || p.avatar || 'https://via.placeholder.com/150'}" alt="頭像" class="w-16 h-16 rounded-full object-cover border-2 border-amber-500 shadow">
+                                <img src="${avatarUrl}" alt="頭像" onerror="this.src='https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80'" class="w-16 h-16 rounded-full object-cover border-2 border-amber-500 shadow">
                                 <div>
                                     <div class="text-xl font-bold text-amber-300">${p.姓名 || '未命名'} <span class="text-sm font-normal text-slate-400">(@${p.代號 || '-'})</span></div>
                                     <div class="text-sm text-slate-400 mt-1">
@@ -160,16 +162,16 @@
                                 <div>種族技能：<span class="text-white">${p['技能:種族'] || '-'}</span></div>
                                 <div>職業技能：<span class="text-white">${p['技能:職業'] || '-'}</span></div>
                                 <div>特殊技能：<span class="text-white">${p['技能:特殊'] || '-'}</span></div>
-                                <div>技能 1 ：<span class="text-white">${p.技能1 || '-'} </span></div>
+                                <div>技能 1：<span class="text-white">${p.技能1 || '-'}</span></div>
                                 <div>技能 2：<span class="text-white">${p.技能2 || '-'}</span></div>
                                 
                                 <div class="font-bold text-amber-400/80 pt-2 border-t border-slate-800/60">額外技能清單</div>
                                 <div id="extraSkills_${id}" class="space-y-1.5">
                                     ${renderExtraSkills(id, p.額外技能 || [])}
-                             </div>
+                                </div>
                             </div>
                             <div class="space-y-2">
-                                <div class="font-bold text-cyan-400 border-b border-slate-800 pb-1">裝備欄位 (可直接修改)</div>
+                                <div class="font-bold text-amber-400 border-b border-slate-800 pb-1">裝備欄位 (可直接修改)</div>
                                 <div class="grid grid-cols-2 gap-2">
                                     ${renderEquipInput(id, '主手', p.裝備_主手)}
                                     ${renderEquipInput(id, '副手', p.裝備_副手)}
@@ -213,6 +215,17 @@
                         <button onclick="window.adjustValue('${id}', '${name}', -1, ${count})" class="bg-slate-700 hover:bg-slate-600 px-2 py-0.5 rounded text-xs">-1</button>
                         <button onclick="window.adjustValue('${id}', '${name}', 1, ${count})" class="bg-slate-700 hover:bg-slate-600 px-2 py-0.5 rounded text-xs">+1</button>
                     </div>
+                </div>
+            `;
+        }
+
+        // 裝備欄位輸入框
+        function renderEquipInput(id, slotName, val) {
+            const dbField = `裝備_${slotName}`;
+            return `
+                <div class="flex flex-col gap-0.5">
+                    <label class="text-[10px] text-slate-400">${slotName}</label>
+                    <input type="text" value="${val || ''}" onchange="window.updateField('${id}', '${dbField}', this.value)" class="bg-slate-800 border border-slate-700 px-2 py-1 rounded text-white text-xs" placeholder="未裝備">
                 </div>
             `;
         }
@@ -366,7 +379,7 @@
         window.createNewPlayer = async function() {
             const newId = "player_" + Date.now();
             await setDoc(doc(db, "players", newId), {
-                頭像: "https://via.placeholder.com/150",
+                頭像: "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80",
                 代號: "新代號",
                 姓名: "新角色",
                 性別: "不明",
@@ -394,9 +407,6 @@
                 '技能:特殊': '無',
                 技能1: '普通攻擊',
                 技能2: '防禦姿勢',
-                裝備技能1: '無',
-                裝備技能2: '無',
-                裝備技能3: '無',
                 額外技能: [],
                 裝備_主手: '木棍',
                 裝備_副手: '無',
