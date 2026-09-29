@@ -181,8 +181,8 @@
                                 <div>種族技能：<span class="text-white">${p['技能:種族'] || '-'}</span></div>
                                 <div>職業技能：<span class="text-white">${p['技能:職業'] || '-'}</span></div>
                                 <div>特殊技能：<span class="text-white">${p['技能:特殊'] || '-'}</span></div>
-                                <div>技能 1 / 2：<span class="text-white">${p.技能1 || '-'} / ${p.技能2 || '-'}</span></div>
-                                
+                                <div>技能 1 ：<span class="text-white">${p.技能1 || '-'}</span></div>
+                                <div>技能 2：<span class="text-white">${p.技能2 || '-'}</span></div>
                                 <div class="font-bold text-cyan-400/80 pt-2 border-t border-slate-800/60">額外技能清單</div>
                                 <div class="space-y-1.5">
                                     ${renderPlayerExtraSkills(id, p.額外技能 || [])}
