@@ -131,11 +131,12 @@
                         </div>
                     </div>
 
-                    <!-- 技能與裝備資訊 -->
-                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs text-slate-300 bg-slate-950/50 p-4 rounded-xl border border-slate-800">
-                        <div class="space-y-2">
-                            <div class="flex justify-between items-center border-b border-slate-800 pb-1">
-                                <span class="font-bold text-cyan-400">技能配置</span>
+                    <!-- 技能與裝備資訊 (改為 textarea 支援長文字與換行) -->
+                    <div class="space-y-4 text-xs text-slate-300 bg-slate-950/50 p-4 rounded-xl border border-slate-800">
+                        <!-- 技能區 -->
+                        <div class="space-y-2 border-b border-slate-800 pb-3">
+                            <div class="flex justify-between items-center">
+                                <span class="font-bold text-cyan-400 text-sm">技能配置</span>
                                 <button onclick="window.addPlayerExtraSkill('${playerId}')" class="bg-slate-800 hover:bg-slate-700 text-xs px-2 py-0.5 rounded border border-slate-700 cursor-pointer">＋ 新增技能</button>
                             </div>
                             <div>種族技能：<span class="text-white">${p['技能:種族'] || '-'}</span></div>
@@ -149,17 +150,19 @@
                                 ${renderPlayerExtraSkills(playerId, p.額外技能 || [])}
                             </div>
                         </div>
+
+                        <!-- 裝備欄位區 -->
                         <div class="space-y-2">
-                            <div class="font-bold text-cyan-400 border-b border-slate-800 pb-1">裝備欄位 (可直接修改)</div>
-                            <div class="grid grid-cols-2 gap-2">
-                                ${renderEquipInput(playerId, '主手', p.裝備_主手)}
-                                ${renderEquipInput(playerId, '副手', p.裝備_副手)}
-                                ${renderEquipInput(playerId, '頭', p.裝備_頭)}
-                                ${renderEquipInput(playerId, '頸', p.裝備_頸)}
-                                ${renderEquipInput(playerId, '身', p.裝備_身)}
-                                ${renderEquipInput(playerId, '手', p.裝備_手)}
-                                ${renderEquipInput(playerId, '腰', p.裝備_腰)}
-                                ${renderEquipInput(playerId, '腳', p.裝備_腳)}
+                            <div class="font-bold text-cyan-400 text-sm">裝備欄位 (可直接修改)</div>
+                            <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                                ${renderEquipTextarea(playerId, '主手', p.裝備_主手)}
+                                ${renderEquipTextarea(playerId, '副手', p.裝備_副手)}
+                                ${renderEquipTextarea(playerId, '頭', p.裝備_頭)}
+                                ${renderEquipTextarea(playerId, '頸', p.裝備_頸)}
+                                ${renderEquipTextarea(playerId, '身', p.裝備_身)}
+                                ${renderEquipTextarea(playerId, '手', p.裝備_手)}
+                                ${renderEquipTextarea(playerId, '腰', p.裝備_腰)}
+                                ${renderEquipTextarea(playerId, '腳', p.裝備_腳)}
                             </div>
                         </div>
                     </div>
@@ -189,12 +192,12 @@
             `;
         }
 
-        function renderEquipInput(id, slotName, val) {
+        function renderEquipTextarea(id, slotName, val) {
             const dbField = `裝備_${slotName}`;
             return `
-                <div class="flex flex-col gap-0.5">
-                    <label class="text-[10px] text-slate-400">${slotName}</label>
-                    <input type="text" value="${val || ''}" onchange="window.updateField('${id}', '${dbField}', this.value)" class="bg-slate-800 border border-slate-700 px-2 py-1 rounded text-white text-xs" placeholder="未裝備">
+                <div class="flex flex-col gap-0.5 bg-slate-900 p-2 rounded border border-slate-800">
+                    <label class="text-[11px] font-bold text-cyan-400/80">${slotName}</label>
+                    <textarea rows="2" onchange="window.updateField('${id}', '${dbField}', this.value)" class="bg-slate-800 border border-slate-700 p-1.5 rounded text-white text-xs resize-y focus:outline-none focus:border-cyan-500" placeholder="未裝備">${val || ''}</textarea>
                 </div>
             `;
         }
@@ -202,9 +205,9 @@
         function renderPlayerExtraSkills(id, skills) {
             if (!skills || skills.length === 0) return '<div class="text-xs text-slate-500">目前無額外技能</div>';
             return skills.map((sk, idx) => `
-                <div class="flex items-center gap-2 bg-slate-900 p-1.5 rounded border border-slate-800">
-                    <input type="text" value="${sk || ''}" onchange="window.updatePlayerExtraSkill('${id}', ${idx}, this.value)" class="bg-slate-800 border border-slate-700 px-2 py-0.5 rounded flex-1 text-white text-xs" placeholder="技能名稱">
-                    <button onclick="window.removePlayerExtraSkill('${id}', ${idx})" class="bg-red-900/60 hover:bg-red-800 text-red-300 px-2 py-0.5 rounded text-xs font-bold cursor-pointer">✕</button>
+                <div class="flex items-center gap-1.5 bg-slate-900 p-1.5 rounded border border-slate-800">
+                    <textarea rows="2" onchange="window.updatePlayerExtraSkill('${id}', ${idx}, this.value)" class="bg-slate-800 border border-slate-700 p-1.5 rounded flex-1 text-white text-xs resize-y focus:outline-none focus:border-cyan-500" placeholder="技能說明">${sk || ''}</textarea>
+                    <button onclick="window.removePlayerExtraSkill('${id}', ${idx})" class="bg-red-900/60 hover:bg-red-800 text-red-300 px-2.5 py-1 rounded text-xs font-bold cursor-pointer">✕</button>
                 </div>
             `).join('');
         }
@@ -234,7 +237,7 @@
             const snap = await getDoc(docRef);
             if (snap.exists()) {
                 const skills = snap.data().額外技能 || [];
-                const updated = [...skills, "新技能"];
+                const updated = [...skills, "新技能說明"];
                 await updateDoc(docRef, { 額外技能: updated });
             }
         };
