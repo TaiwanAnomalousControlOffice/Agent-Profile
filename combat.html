@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>TRPG 戰鬥動態排序與 Boss 調整面板</title>
+    <title>TRPG 戰鬥動態排序與 Boss 面板</title>
     <style>
         body { font-family: sans-serif; background: #090d16; color: #f1f5f9; padding: 20px; max-width: 1000px; margin: auto; }
         h1, h2 { color: #38bdf8; }
@@ -95,8 +95,17 @@
             snapshot.forEach((docSnap) => {
                 allPlayersData.push({ id: docSnap.id, type: 'player', ...docSnap.data() });
             });
+            
+            // 預設全部勾選
+            if (selectedPlayerIds.size === 0 && allPlayersData.length > 0) {
+                allPlayersData.forEach(p => selectedPlayerIds.add(p.id));
+            }
+
             renderPlayerCheckboxes();
             updateAndRender();
+        }, (error) => {
+            console.error("讀取玩家失敗:", error);
+            checkboxContainer.innerHTML = `<span style="color:#f43f5e;">讀取玩家失敗: ${error.message}</span>`;
         });
 
         // 監聽 monsters 集合
@@ -106,6 +115,8 @@
                 monstersData.push({ id: docSnap.id, type: 'monster', ...docSnap.data() });
             });
             updateAndRender();
+        }, (error) => {
+            console.log("尚無 monsters 集合或讀取中");
         });
 
         // 渲染玩家參戰勾選框
@@ -115,11 +126,6 @@
                 return;
             }
 
-            // 如果是第一次載入，預設全部勾選
-            if (selectedPlayerIds.size === 0) {
-                allPlayersData.forEach(p => selectedPlayerIds.add(p.id));
-            }
-
             checkboxContainer.innerHTML = "";
             allPlayersData.forEach(p => {
                 const isChecked = selectedPlayerIds.has(p.id);
@@ -127,26 +133,28 @@
                 const label = document.createElement("label");
                 label.className = "checkbox-label";
                 label.innerHTML = `
-                    <input type="checkbox" value="${p.id}" ${isChecked ? 'checked' : ''} onchange="togglePlayer('${p.id}')">
+                    <input type="checkbox" value="${p.id}" ${isChecked ? 'checked' : ''} data-id="${p.id}" class="player-chk">
                     ${name} (${p.id})
                 `;
                 checkboxContainer.appendChild(label);
             });
-        }
 
-        // 切換玩家參戰狀態
-        window.togglePlayer = (id) => {
-            if (selectedPlayerIds.has(id)) {
-                selectedPlayerIds.delete(id);
-            } else {
-                selectedPlayerIds.add(id);
-            }
-            updateAndRender();
-        };
+            // 綁定勾選事件
+            document.querySelectorAll('.player-chk').forEach(chk => {
+                chk.addEventListener('change', (e) => {
+                    const id = e.target.getAttribute('data-id');
+                    if (e.target.checked) {
+                        selectedPlayerIds.add(id);
+                    } else {
+                        selectedPlayerIds.delete(id);
+                    }
+                    updateAndRender();
+                });
+            });
+        }
 
         // 統整並排序渲染
         function updateAndRender() {
-            // 只抓取被勾選參戰的玩家
             const activePlayers = allPlayersData.filter(p => selectedPlayerIds.has(p.id));
             let allEntities = [...activePlayers, ...monstersData];
 
@@ -221,7 +229,7 @@
             });
         }
 
-        // 新增一般魔物
+        // 新種一般魔物
         document.getElementById("add-monster-btn").addEventListener("click", async () => {
             const name = document.getElementById("m-name").value.trim();
             if (!name) { alert("請輸入魔物名稱！"); return; }
@@ -256,12 +264,9 @@
             const name = document.getElementById("b-name").value.trim();
             if (!name) { alert("請輸入 BOSS 名稱！"); return; }
 
-            const activePlayerCount = selectedPlayerIds.size; // 目前勾選參戰的人數
+            const activePlayerCount = selectedPlayerIds.size;
             const baseHp = Number(document.getElementById("b-hp").value) || 30;
 
-            // 血量加成公式：
-            // 1人 = 1倍, 2人 = 1.5倍, 3人 = 2倍 ... (每增加1人多 0.5倍)
-            // 如果玩家人數為 0，預設至少算 1 人
             const count = Math.max(activePlayerCount, 1);
             const multiplier = 1 + (count - 1) * 0.5;
             const finalHp = Math.round(baseHp * multiplier);
@@ -286,7 +291,7 @@
 
             try {
                 await addDoc(collection(db, "monsters"), newBoss);
-                alert(`👑 BOSS 生成成功！\n目前參戰玩家人數：${count} 人\n血量倍率：${multiplier} 倍\n最終 BOSS 血量：${finalHp}`);
+                alert(`👑 BOSS 生成成功！\n參戰人數：${count} 人\n血量倍率：${multiplier} 倍\n最終 BOSS 血量：${finalHp}`);
                 document.getElementById("b-name").value = "";
             } catch (e) { console.error(e); alert("生成 BOSS 失敗"); }
         });
