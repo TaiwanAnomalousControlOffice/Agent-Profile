@@ -39,14 +39,18 @@
 
             const p = docSnap.data();
             const avatarUrl = p.頭像 || p.avatar || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80';
+            
+            // 主要顯示代號，若無代號則顯示姓名
+            const primaryName = p.代號 || p.姓名 || '未命名';
+            const subName = p.代號 ? `(姓名: ${p.姓名 || '-'})` : '';
 
             container.innerHTML = `
                 <div class="bg-slate-900 border border-slate-800 rounded-xl p-6 shadow-2xl space-y-6">
-                    <!-- 基本資料區 (僅顯示) -->
+                    <!-- 基本資料區 (放大頭像、主要顯示代號) -->
                     <div class="flex flex-col md:flex-row items-center gap-6 border-b border-slate-800 pb-6 text-center md:text-left">
-                        <img src="${avatarUrl}" alt="頭像" onerror="this.src='https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80'" class="w-24 h-24 rounded-full object-cover border-2 border-cyan-400 shadow-lg">
-                        <div class="space-y-1 flex-1">
-                            <div class="text-2xl font-bold text-cyan-300">${p.姓名 || '未命名'} <span class="text-sm font-normal text-slate-400">(@${p.代號 || '-'})</span></div>
+                        <img src="${avatarUrl}" alt="頭像" onerror="this.src='https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80'" class="w-32 h-32 rounded-full object-cover border-4 border-cyan-400 shadow-xl">
+                        <div class="space-y-1.5 flex-1">
+                            <div class="text-3xl font-bold text-cyan-300">${primaryName} <span class="text-sm font-normal text-slate-400">${subName}</span></div>
                             <div class="text-sm text-slate-300 flex flex-wrap justify-center md:justify-start gap-3 mt-2">
                                 <span class="bg-slate-800 px-2.5 py-1 rounded border border-slate-700">性別: ${p.性別 || '-'}</span>
                                 <span class="bg-slate-800 px-2.5 py-1 rounded border border-slate-700">年齡: ${p.年齡 || '-'}</span>
