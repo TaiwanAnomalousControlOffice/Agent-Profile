@@ -1,0 +1,200 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TRPG 戰鬥行動順序面板 (速度排序)</title>
+    <style>
+        body { font-family: sans-serif; background: #090d16; color: #f1f5f9; padding: 20px; max-width: 1000px; margin: auto; }
+        h1, h2 { color: #38bdf8; }
+        .panel { background: #1e293b; padding: 20px; border-radius: 8px; margin-bottom: 25px; border: 1px solid #334155; }
+        .combat-card { background: #1e293b; padding: 15px; border-radius: 8px; margin-bottom: 12px; border: 1px solid #475569; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 15px; }
+        .combat-card.monster { border-left: 5px solid #f43f5e; background: #221821; }
+        .combat-card.player { border-left: 5px solid #38bdf8; }
+        .info-group { flex: 1; min-width: 250px; }
+        .stats-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 8px; margin-top: 8px; }
+        .stat-box { background: #0f172a; padding: 6px; border-radius: 4px; text-align: center; font-size: 0.85rem; }
+        .stat-box span { display: block; font-weight: bold; color: #facc15; }
+        input, select { width: 100%; padding: 6px; background: #0f172a; border: 1px solid #475569; color: #fff; border-radius: 4px; box-sizing: border-box; margin-top: 4px; }
+        button { background: #38bdf8; color: #0f172a; border: none; padding: 8px 14px; font-weight: bold; border-radius: 4px; cursor: pointer; }
+        button:hover { background: #0ea5e9; }
+        .btn-danger { background: #f43f5e; color: #fff; }
+        .btn-danger:hover { background: #e11d48; }
+        .form-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-bottom: 10px; }
+    </style>
+</head>
+<body>
+
+    <h1>⚔️ TRPG 戰鬥動態排序面板 (速度導向)</h1>
+    <p style="color: #94a3b8;">自動抓取所有玩家與魔物，並依照「速度」由高至低排列行動順序。</p>
+
+    <!-- 新增魔物面板 -->
+    <div class="panel">
+        <h2>👹 新增魔物</h2>
+        <div class="form-grid">
+            <div><label>魔物名稱 / 代號</label><input type="text" id="m-name" placeholder="例如：山精野怪"></div>
+            <div><label>種族 / 類型</label><input type="text" id="m-race" placeholder="例如：妖獸"></div>
+            <div><label>速度 (決定順序)</label><input type="number" id="m-speed" value="10"></div>
+            <div><label>生命值 (當前 / 初始)</label><input type="number" id="m-hp" value="50"></div>
+            <div><label>修為值 (當前 / 初始)</label><input type="number" id="m-mp" value="20"></div>
+            <div><label>攻擊力</label><input type="number" id="m-atk" value="15"></div>
+            <div><label>防禦力</label><input type="number" id="m-def" value="5"></div>
+            <div><label>技能 1</label><input type="text" id="m-skill1" placeholder="技能描述"></div>
+            <div><label>技能 2</label><input type="text" id="m-skill2" placeholder="技能描述"></div>
+            <div><label>技能 3</label><input type="text" id="m-skill3" placeholder="技能描述"></div>
+        </div>
+        <button class="btn-danger" id="add-monster-btn" style="margin-top: 10px;">➕ 建立並加入戰鬥</button>
+    </div>
+
+    <!-- 戰鬥序列列表 -->
+    <h2>📊 回合行動序列 (速度排序)</h2>
+    <div id="battle-list">載入中...</div>
+
+    <script type="module">
+        import { db, collection, onSnapshot, addDoc, deleteDoc, doc } from "./firebase-config.js";
+
+        const battleList = document.getElementById("battle-list");
+        
+        let playersData = [];
+        let monstersData = [];
+
+        // 同步監聽 players 集合
+        onSnapshot(collection(db, "players"), (snapshot) => {
+            playersData = [];
+            snapshot.forEach((docSnap) => {
+                playersData.push({ id: docSnap.id, type: 'player', ...docSnap.data() });
+            });
+            renderBattleQueue();
+        });
+
+        // 同步監聽 monsters 集合
+        onSnapshot(collection(db, "monsters"), (snapshot) => {
+            monstersData = [];
+            snapshot.forEach((docSnap) => {
+                monstersData.push({ id: docSnap.id, type: 'monster', ...docSnap.data() });
+            });
+            renderBattleQueue();
+        });
+
+        // 統整並依照速度排序渲染
+        function renderBattleQueue() {
+            // 合併陣列
+            let allEntities = [...playersData, ...monstersData];
+
+            // 依照速度 (速度 / 速度初始值) 由高到低排序
+            allEntities.sort((a, b) => {
+                const speedA = Number(a["速度"] !== undefined ? a["速度"] : (a["速度初始值"] || 0));
+                const speedB = Number(b["速度"] !== undefined ? b["速度"] : (b["速度初始值"] || 0));
+                return speedB - speedA; // 高速在前
+            });
+
+            battleList.innerHTML = "";
+            if (allEntities.length === 0) {
+                battleList.innerHTML = "<p>目前沒有任何角色或魔物。</p>";
+                return;
+            }
+
+            allEntities.forEach((item, index) => {
+                const isMonster = item.type === 'monster';
+                const card = document.createElement("div");
+                card.className = `combat-card ${isMonster ? 'monster' : 'player'}`;
+
+                const name = item.姓名 || item.代號 || '未命名';
+                const tag = isMonster ? '👹 魔物' : `🛡️ 玩家 (${item.id})` ;
+                const speed = item["速度"] !== undefined ? item["速度"] : (item["速度初始值"] || 0);
+                const hp = item["生命值"] || 0;
+                const hpMax = item["生命初始值"] || 0;
+                const mp = item["修為"] || 0;
+                const mpMax = item["修為初始值"] || 0;
+                const atk = item["攻擊"] || 0;
+                const def = item["防禦"] || 0;
+
+                let html = `
+                    <div class="info-group">
+                        <span style="font-size: 0.8rem; color: #94a3b8;">#${index + 1} | ${tag}</span>
+                        <h3 style="margin: 2px 0 6px 0;">${name}</h3>
+                        <div class="stats-grid">
+                            <div class="stat-box">生命 <span>${hp}/${hpMax}</span></div>
+                            <div class="stat-box">修為 <span>${mp}/${mpMax}</span></div>
+                            <div class="stat-box" style="color:#38bdf8;">速度 <span>${speed}</span></div>
+                            <div class="stat-box">攻擊 <span>${atk}</span></div>
+                            <div class="stat-box">防禦 <span>${def}</span></div>
+                        </div>
+                    </div>
+                `;
+
+                // 道具欄位 (玩家) 或是 3 個技能欄位 (魔物)
+                html += `<div style="flex: 1; min-width: 220px; background: #0f172a; padding: 10px; border-radius: 6px;">`;
+                if (!isMonster) {
+                    html += `<span style="font-size: 0.8rem; color: #38bdf8; font-weight: bold;">常用物品:</span><div style="font-size: 0.85rem; margin-top: 4px; color: #cbd5e1;">`;
+                    html += `繃帶: ${item["繃帶"] || 0} | 藥劑: ${item["修為恢復藥劑"] || 0} | 解錠: ${item["異常解錠"] || 0}<br>解咒: ${item["解咒符"] || 0} | 封魔: ${item["封魔匣"] || 0}`;
+                    html += `</div>`;
+                } else {
+                    html += `<span style="font-size: 0.8rem; color: #f43f5e; font-weight: bold;">戰鬥技能:</span><ul style="margin: 4px 0 0 0; padding-left: 18px; font-size: 0.85rem; color: #cbd5e1;">`;
+                    html += `<li>${item["技能1"] || '無'}</li>`;
+                    html += `<li>${item["技能2"] || '無'}</li>`;
+                    html += `<li>${item["技能3"] || '無'}</li>`;
+                    html += `</ul>`;
+                    html += `<button class="btn-danger" style="padding: 4px 8px; font-size: 0.75rem; margin-top: 6px;" onclick="deleteMonster('${item.id}')">刪除魔物</button>`;
+                }
+                html += `</div>`;
+
+                card.innerHTML = html;
+                battleList.appendChild(card);
+            });
+        }
+
+        // 新增魔物事件
+        document.getElementById("add-monster-btn").addEventListener("click", async () => {
+            const name = document.getElementById("m-name").value.trim();
+            if (!name) {
+                alert("請輸入魔物名稱！");
+                return;
+            }
+
+            const newMonster = {
+                姓名: name,
+                代號: name,
+                種族: document.getElementById("m-race").value.trim() || '野生魔物',
+                速度: Number(document.getElementById("m-speed").value) || 10,
+                速度初始值: Number(document.getElementById("m-speed").value) || 10,
+                生命值: Number(document.getElementById("m-hp").value) || 50,
+                生命初始值: Number(document.getElementById("m-hp").value) || 50,
+                修為: Number(document.getElementById("m-mp").value) || 20,
+                修為初始值: Number(document.getElementById("m-mp").value) || 20,
+                攻擊: Number(document.getElementById("m-atk").value) || 15,
+                攻擊初始值: Number(document.getElementById("m-atk").value) || 15,
+                防禦: Number(document.getElementById("m-def").value) || 5,
+                防禦初始值: Number(document.getElementById("m-def").value) || 5,
+                技能1: document.getElementById("m-skill1").value.trim() || '無',
+                技能2: document.getElementById("m-skill2").value.trim() || '無',
+                技能3: document.getElementById("m-skill3").value.trim() || '無'
+            };
+
+            try {
+                await addDoc(collection(db, "monsters"), newMonster);
+                alert("魔物新增成功！");
+                // 清空欄位
+                document.getElementById("m-name").value = "";
+                document.getElementById("m-skill1").value = "";
+                document.getElementById("m-skill2").value = "";
+                document.getElementById("m-skill3").value = "";
+            } catch (e) {
+                console.error(e);
+                alert("新增魔物失敗");
+            }
+        });
+
+        // 刪除魔物
+        window.deleteMonster = async (id) => {
+            if (!confirm("確定要將這隻魔物從戰鬥中移除嗎？")) return;
+            try {
+                await deleteDoc(doc(db, "monsters", id));
+            } catch (e) {
+                console.error(e);
+                alert("刪除失敗");
+            }
+        };
+    </script>
+</body>
+</html>
