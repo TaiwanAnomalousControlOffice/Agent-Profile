@@ -6,7 +6,6 @@
     <script src="https://cdn.tailwindcss.com"></script>
 </head>
 <body class="bg-slate-950 text-slate-100 min-h-screen p-4">
-    <!-- 將版面收窄至 max-w-4xl，畫面更集中 -->
     <div class="max-w-4xl mx-auto space-y-4">
         <div class="flex justify-between items-center bg-slate-900 p-3 rounded-xl border border-slate-800 shadow-lg">
             <h1 class="text-2xl font-bold text-amber-400">GM 遊戲管理面板</h1>
@@ -35,7 +34,6 @@
         const container = document.getElementById('playersContainer');
         const filterContainer = document.getElementById('filterCheckboxes');
 
-        // 從 localStorage 讀取先前勾選的參與名單，若無則預設全選
         let activePlayersFilter = JSON.parse(localStorage.getItem('trpg_active_filter')) || null;
 
         try {
@@ -51,12 +49,10 @@
                     allDocs.push({ id: docSnap.id, data: docSnap.data() });
                 });
 
-                // 若是第一次載入，預設全部勾選
                 if (!activePlayersFilter) {
                     activePlayersFilter = allDocs.map(d => d.id);
                 }
 
-                // 1. 渲染上方勾選控制列
                 let filterHtml = '';
                 allDocs.forEach(item => {
                     const p = item.data;
@@ -71,7 +67,6 @@
                 });
                 filterContainer.innerHTML = filterHtml;
 
-                // 2. 篩選並渲染下方的角色面板
                 container.innerHTML = '';
                 const filteredDocs = allDocs.filter(item => activePlayersFilter.includes(item.id));
 
@@ -210,11 +205,12 @@
                             ${renderItemControl(id, '封魔匣', p.封魔匣)}
                         </div>
 
-                        <!-- 4. 技能與裝備資訊 -->
-                        <div class="grid grid-cols-1 md:grid-cols-2 gap-3 text-xs text-slate-300 bg-slate-950/60 p-3 rounded-xl border border-slate-800">
-                            <div class="space-y-1.5">
-                                <div class="flex justify-between items-center border-b border-slate-800 pb-1">
-                                    <span class="font-bold text-amber-400">技能配置</span>
+                        <!-- 4. 技能配置與裝備欄位 (改為上下獨立區塊，裝備改用 textarea 支援長文字與換行) -->
+                        <div class="space-y-3 text-xs text-slate-300 bg-slate-950/60 p-3 rounded-xl border border-slate-800">
+                            <!-- 技能配置區 -->
+                            <div class="space-y-1.5 border-b border-slate-800 pb-3">
+                                <div class="flex justify-between items-center">
+                                    <span class="font-bold text-amber-400 text-sm">技能配置</span>
                                     <button onclick="window.addExtraSkill('${id}')" class="bg-slate-800 hover:bg-slate-700 text-[11px] px-2 py-0.5 rounded border border-slate-700 cursor-pointer">＋ 新增技能</button>
                                 </div>
                                 <div>種族技能：<span class="text-white">${p['技能:種族'] || '-'}</span></div>
@@ -228,17 +224,19 @@
                                     ${renderExtraSkills(id, p.額外技能 || [])}
                                 </div>
                             </div>
-                            <div class="space-y-1.5">
-                                <div class="font-bold text-amber-400 border-b border-slate-800 pb-1">裝備欄位 (可直接修改)</div>
-                                <div class="grid grid-cols-2 gap-1.5">
-                                    ${renderEquipInput(id, '主手', p.裝備_主手)}
-                                    ${renderEquipInput(id, '副手', p.裝備_副手)}
-                                    ${renderEquipInput(id, '頭', p.裝備_頭)}
-                                    ${renderEquipInput(id, '頸', p.裝備_頸)}
-                                    ${renderEquipInput(id, '身', p.裝備_身)}
-                                    ${renderEquipInput(id, '手', p.裝備_手)}
-                                    ${renderEquipInput(id, '腰', p.裝備_腰)}
-                                    ${renderEquipInput(id, '腳', p.裝備_腳)}
+
+                            <!-- 裝備欄位區 (改為獨立寬螢幕顯示，使用 textarea 完整顯示長說明) -->
+                            <div class="space-y-2">
+                                <div class="font-bold text-amber-400 text-sm">裝備欄位 (可直接修改)</div>
+                                <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                                    ${renderEquipTextarea(id, '主手', p.裝備_主手)}
+                                    ${renderEquipTextarea(id, '副手', p.裝備_副手)}
+                                    ${renderEquipTextarea(id, '頭', p.裝備_頭)}
+                                    ${renderEquipTextarea(id, '頸', p.裝備_頸)}
+                                    ${renderEquipTextarea(id, '身', p.裝備_身)}
+                                    ${renderEquipTextarea(id, '手', p.裝備_手)}
+                                    ${renderEquipTextarea(id, '腰', p.裝備_腰)}
+                                    ${renderEquipTextarea(id, '腳', p.裝備_腳)}
                                 </div>
                             </div>
                         </div>
@@ -262,7 +260,6 @@
             container.innerHTML = `<div class="text-red-500 text-center py-10">初始化失敗：${e.message}</div>`;
         }
 
-        // 篩選勾選切換函式
         window.toggleFilter = function(checkbox) {
             const id = checkbox.value;
             if (!activePlayersFilter) activePlayersFilter = [];
@@ -272,7 +269,7 @@
                 activePlayersFilter = activePlayersFilter.filter(item => item !== id);
             }
             localStorage.setItem('trpg_active_filter', JSON.stringify(activePlayersFilter));
-            location.reload(); // 重新整理以即時套用畫面篩選
+            location.reload();
         };
 
         function renderItemControl(id, name, val) {
@@ -289,12 +286,13 @@
             `;
         }
 
-        function renderEquipInput(id, slotName, val) {
+        // 裝備欄位改用 textarea 支援長文字與換行
+        function renderEquipTextarea(id, slotName, val) {
             const dbField = `裝備_${slotName}`;
             return `
-                <div class="flex flex-col gap-0.5">
-                    <label class="text-[10px] text-slate-400">${slotName}</label>
-                    <input type="text" value="${val || ''}" onchange="window.updateField('${id}', '${dbField}', this.value)" class="bg-slate-800 border border-slate-700 px-2 py-0.5 rounded text-white text-xs" placeholder="未裝備">
+                <div class="flex flex-col gap-0.5 bg-slate-900 p-2 rounded border border-slate-800">
+                    <label class="text-[11px] font-bold text-amber-400/80">${slotName}</label>
+                    <textarea rows="2" onchange="window.updateField('${id}', '${dbField}', this.value)" class="bg-slate-800 border border-slate-700 p-1.5 rounded text-white text-xs resize-y focus:outline-none focus:border-amber-500" placeholder="未裝備">${val || ''}</textarea>
                 </div>
             `;
         }
@@ -302,9 +300,9 @@
         function renderExtraSkills(id, skills) {
             if (!skills || skills.length === 0) return '<div class="text-xs text-slate-500">目前無額外技能</div>';
             return skills.map((sk, idx) => `
-                <div class="flex items-center gap-1.5 bg-slate-900 p-1 rounded border border-slate-800">
-                    <input type="text" value="${sk || ''}" onchange="window.updateExtraSkill('${id}', ${idx}, this.value)" class="bg-slate-800 border border-slate-700 px-2 py-0.5 rounded flex-1 text-white text-xs" placeholder="技能名稱">
-                    <button onclick="window.removeExtraSkill('${id}', ${idx})" class="bg-red-900/60 hover:bg-red-800 text-red-300 px-1.5 py-0.5 rounded text-xs font-bold cursor-pointer">✕</button>
+                <div class="flex items-center gap-1.5 bg-slate-900 p-1.5 rounded border border-slate-800">
+                    <textarea rows="2" onchange="window.updateExtraSkill('${id}', ${idx}, this.value)" class="bg-slate-800 border border-slate-700 p-1.5 rounded flex-1 text-white text-xs resize-y focus:outline-none focus:border-amber-500" placeholder="技能說明">${sk || ''}</textarea>
+                    <button onclick="window.removeExtraSkill('${id}', ${idx})" class="bg-red-900/60 hover:bg-red-800 text-red-300 px-2 py-1 rounded text-xs font-bold cursor-pointer">✕</button>
                 </div>
             `).join('');
         }
@@ -313,9 +311,9 @@
             if (!items || items.length === 0) return '<div class="text-xs text-slate-500 text-center py-0.5">目前無其他道具</div>';
             return items.map((item, idx) => `
                 <div class="flex items-center gap-2 bg-slate-900 p-1.5 rounded border border-slate-800 text-xs">
-                    <input type="text" value="${item.name || ''}" onchange="window.updateOtherItemName('${id}', ${idx}, this.value)" class="bg-slate-800 border border-slate-700 px-2 py-0.5 rounded flex-1 text-slate-200" placeholder="道具名稱">
-                    <input type="number" value="${item.qty || 1}" onchange="window.updateOtherItemQty('${id}', ${idx}, parseInt(this.value) || 1)" class="bg-slate-800 border border-slate-700 px-2 py-0.5 rounded w-14 text-center text-slate-200">
-                    <button onclick="window.removeOtherItem('${id}', ${idx})" class="text-red-400 hover:text-red-300 px-1.5 py-0.5 font-bold">✕</button>
+                    <input type="text" value="${item.name || ''}" onchange="window.updateOtherItemName('${id}', ${idx}, this.value)" class="bg-slate-800 border border-slate-700 px-2 py-1 rounded flex-1 text-slate-200" placeholder="道具名稱">
+                    <input type="number" value="${item.qty || 1}" onchange="window.updateOtherItemQty('${id}', ${idx}, parseInt(this.value) || 1)" class="bg-slate-800 border border-slate-700 px-2 py-1 rounded w-14 text-center text-slate-200">
+                    <button onclick="window.removeOtherItem('${id}', ${idx})" class="text-red-400 hover:text-red-300 px-1.5 py-1 font-bold">✕</button>
                 </div>
             `).join('');
         }
@@ -366,7 +364,7 @@
             const snap = await getDoc(docRef);
             if (snap.exists()) {
                 const skills = snap.data().額外技能 || [];
-                await updateDoc(docRef, { 額外技能: [...skills, "新技能"] });
+                await updateDoc(docRef, { 額外技能: [...skills, "新技能說明"] });
             }
         };
 
