@@ -5,15 +5,24 @@
     <title>GM 遊戲管理面板 (TRPG-NFC)</title>
     <script src="https://cdn.tailwindcss.com"></script>
 </head>
-<body class="bg-slate-950 text-slate-100 min-h-screen p-4 md:p-6">
-    <div class="max-w-7xl mx-auto space-y-4">
+<body class="bg-slate-950 text-slate-100 min-h-screen p-4">
+    <!-- 將版面收窄至 max-w-4xl，畫面更集中 -->
+    <div class="max-w-4xl mx-auto space-y-4">
         <div class="flex justify-between items-center bg-slate-900 p-3 rounded-xl border border-slate-800 shadow-lg">
             <h1 class="text-2xl font-bold text-amber-400">GM 遊戲管理面板</h1>
             <button onclick="createNewPlayer()" class="bg-amber-600 hover:bg-amber-500 px-3 py-1.5 rounded-lg text-sm font-bold cursor-pointer transition">＋ 建立新角色</button>
         </div>
 
+        <!-- 參與玩家快速勾選篩選區 -->
+        <div class="bg-slate-900 p-3 rounded-xl border border-slate-800 shadow space-y-2">
+            <div class="text-xs font-bold text-amber-400">本次參與遊戲角色篩選（勾選者才會顯示下方控制面板）：</div>
+            <div id="filterCheckboxes" class="flex flex-wrap gap-3 text-xs">
+                <span class="text-slate-500">載入中...</span>
+            </div>
+        </div>
+
         <!-- 玩家列表容器 -->
-        <div id="playersContainer" class="space-y-4">
+        <div id="playersContainer" class="space-y-6">
             <div id="statusMsg" class="text-center py-10 text-slate-400">正在連線至 Firestore 讀取玩家資料...</div>
         </div>
     </div>
@@ -24,19 +33,56 @@
         import { collection, onSnapshot, doc, updateDoc, setDoc, getDoc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
         const container = document.getElementById('playersContainer');
+        const filterContainer = document.getElementById('filterCheckboxes');
+
+        // 從 localStorage 讀取先前勾選的參與名單，若無則預設全選
+        let activePlayersFilter = JSON.parse(localStorage.getItem('trpg_active_filter')) || null;
 
         try {
             onSnapshot(collection(db, "players"), (snapshot) => {
                 if (snapshot.empty) {
                     container.innerHTML = '<div class="text-center py-10 text-amber-500">資料庫連線成功，但目前 players 集合內沒有任何文檔。</div>';
+                    filterContainer.innerHTML = '<span class="text-slate-500">無角色可勾選</span>';
                     return;
                 }
 
-                container.innerHTML = '';
-
+                let allDocs = [];
                 snapshot.forEach((docSnap) => {
-                    const id = docSnap.id;
-                    const p = docSnap.data();
+                    allDocs.push({ id: docSnap.id, data: docSnap.data() });
+                });
+
+                // 若是第一次載入，預設全部勾選
+                if (!activePlayersFilter) {
+                    activePlayersFilter = allDocs.map(d => d.id);
+                }
+
+                // 1. 渲染上方勾選控制列
+                let filterHtml = '';
+                allDocs.forEach(item => {
+                    const p = item.data;
+                    const name = p.代號 || p.姓名 || '未命名';
+                    const isChecked = activePlayersFilter.includes(item.id) ? 'checked' : '';
+                    filterHtml += `
+                        <label class="flex items-center gap-1.5 bg-slate-800 px-2 py-1 rounded border border-slate-700 cursor-pointer text-slate-200">
+                            <input type="checkbox" value="${item.id}" ${isChecked} onchange="window.toggleFilter(this)" class="accent-amber-500">
+                            <span>${name}</span>
+                        </label>
+                    `;
+                });
+                filterContainer.innerHTML = filterHtml;
+
+                // 2. 篩選並渲染下方的角色面板
+                container.innerHTML = '';
+                const filteredDocs = allDocs.filter(item => activePlayersFilter.includes(item.id));
+
+                if (filteredDocs.length === 0) {
+                    container.innerHTML = '<div class="text-center py-10 text-slate-500">目前沒有勾選任何參與遊戲的角色。</div>';
+                    return;
+                }
+
+                filteredDocs.forEach((item) => {
+                    const id = item.id;
+                    const p = item.data;
                     const card = document.createElement('div');
                     card.className = "bg-slate-900 border border-slate-800 rounded-xl p-4 shadow-xl space-y-4";
                     
@@ -45,8 +91,8 @@
                     const subName = p.代號 ? `(姓名: ${p.姓名 || '-'})` : '';
 
                     card.innerHTML = `
-                        <!-- 1. 基本資料與長短休區 (精簡縮小) -->
-                        <div class="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-3 border-b border-slate-800 pb-3">
+                        <!-- 1. 基本資料與長短休區 -->
+                        <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 border-b border-slate-800 pb-3">
                             <div class="flex items-center gap-3">
                                 <img src="${avatarUrl}" alt="頭像" onerror="this.src='https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80'" class="w-12 h-12 rounded-full object-cover border-2 border-amber-500 shadow">
                                 <div>
@@ -71,8 +117,8 @@
                             </div>
                         </div>
 
-                        <!-- 2. 屬性數值與初始值調整區 (數值可直接修改) -->
-                        <div class="grid grid-cols-1 md:grid-cols-5 gap-3">
+                        <!-- 2. 屬性數值與初始值調整區 -->
+                        <div class="grid grid-cols-2 md:grid-cols-5 gap-2.5">
                             <!-- 生命值 -->
                             <div class="bg-slate-800/60 p-2.5 rounded-lg border border-slate-700/60 space-y-1.5">
                                 <div class="flex justify-between items-center text-[11px]">
@@ -80,7 +126,7 @@
                                     <span class="text-slate-400">上限: <input type="number" value="${p.生命初始值 ?? 100}" onchange="window.updateField('${id}', '生命初始值', parseInt(this.value) || 0)" class="w-10 bg-slate-900 text-center rounded border border-slate-700 text-[11px] text-amber-300"></span>
                                 </div>
                                 <div class="text-center">
-                                    <input type="number" value="${p.生命值 ?? 0}" onchange="window.updateField('${id}', '生命值', parseInt(this.value) || 0)" class="w-20 bg-slate-900 border border-slate-700 rounded text-center text-xl font-bold text-red-400 py-0.5">
+                                    <input type="number" value="${p.生命值 ?? 0}" onchange="window.updateField('${id}', '生命值', parseInt(this.value) || 0)" class="w-full bg-slate-900 border border-slate-700 rounded text-center text-xl font-bold text-red-400 py-0.5">
                                 </div>
                                 <div class="flex justify-center gap-1">
                                     <button onclick="window.adjustValue('${id}', '生命值', -5, ${p.生命值 ?? 0})" class="bg-slate-700 hover:bg-slate-600 px-1 py-0.5 rounded text-[10px]">-5</button>
@@ -97,7 +143,7 @@
                                     <span class="text-slate-400">上限: <input type="number" value="${p.修為初始值 ?? 50}" onchange="window.updateField('${id}', '修為初始值', parseInt(this.value) || 0)" class="w-10 bg-slate-900 text-center rounded border border-slate-700 text-[11px] text-amber-300"></span>
                                 </div>
                                 <div class="text-center">
-                                    <input type="number" value="${p.修為 ?? 0}" onchange="window.updateField('${id}', '修為', parseInt(this.value) || 0)" class="w-20 bg-slate-900 border border-slate-700 rounded text-center text-xl font-bold text-cyan-400 py-0.5">
+                                    <input type="number" value="${p.修為 ?? 0}" onchange="window.updateField('${id}', '修為', parseInt(this.value) || 0)" class="w-full bg-slate-900 border border-slate-700 rounded text-center text-xl font-bold text-cyan-400 py-0.5">
                                 </div>
                                 <div class="flex justify-center gap-1">
                                     <button onclick="window.adjustValue('${id}', '修為', -5, ${p.修為 ?? 0})" class="bg-slate-700 hover:bg-slate-600 px-1 py-0.5 rounded text-[10px]">-5</button>
@@ -114,7 +160,7 @@
                                     <span class="text-slate-400">初始: <input type="number" value="${p.速度初始值 ?? 10}" onchange="window.updateField('${id}', '速度初始值', parseInt(this.value) || 0)" class="w-10 bg-slate-900 text-center rounded border border-slate-700 text-[11px] text-amber-300"></span>
                                 </div>
                                 <div class="text-center">
-                                    <input type="number" value="${p.速度 ?? 0}" onchange="window.updateField('${id}', '速度', parseInt(this.value) || 0)" class="w-20 bg-slate-900 border border-slate-700 rounded text-center text-xl font-bold text-emerald-400 py-0.5">
+                                    <input type="number" value="${p.速度 ?? 0}" onchange="window.updateField('${id}', '速度', parseInt(this.value) || 0)" class="w-full bg-slate-900 border border-slate-700 rounded text-center text-xl font-bold text-emerald-400 py-0.5">
                                 </div>
                                 <div class="flex justify-center gap-1">
                                     <button onclick="window.adjustValue('${id}', '速度', -5, ${p.速度 ?? 0})" class="bg-slate-700 hover:bg-slate-600 px-1 py-0.5 rounded text-[10px]">-5</button>
@@ -131,7 +177,7 @@
                                     <span class="text-slate-400">初始: <input type="number" value="${p.攻擊初始值 ?? 10}" onchange="window.updateField('${id}', '攻擊初始值', parseInt(this.value) || 0)" class="w-10 bg-slate-900 text-center rounded border border-slate-700 text-[11px] text-amber-300"></span>
                                 </div>
                                 <div class="text-center">
-                                    <input type="number" value="${p.攻擊 ?? 0}" onchange="window.updateField('${id}', '攻擊', parseInt(this.value) || 0)" class="w-20 bg-slate-900 border border-slate-700 rounded text-center text-xl font-bold text-orange-400 py-0.5">
+                                    <input type="number" value="${p.攻擊 ?? 0}" onchange="window.updateField('${id}', '攻擊', parseInt(this.value) || 0)" class="w-full bg-slate-900 border border-slate-700 rounded text-center text-xl font-bold text-orange-400 py-0.5">
                                 </div>
                                 <div class="flex justify-center gap-1">
                                     <button onclick="window.adjustValue('${id}', '攻擊', -1, ${p.攻擊 ?? 0})" class="bg-slate-700 hover:bg-slate-600 px-2 py-0.5 rounded text-[10px]">-1</button>
@@ -146,7 +192,7 @@
                                     <span class="text-slate-400">初始: <input type="number" value="${p.防禦初始值 ?? 10}" onchange="window.updateField('${id}', '防禦初始值', parseInt(this.value) || 0)" class="w-10 bg-slate-900 text-center rounded border border-slate-700 text-[11px] text-amber-300"></span>
                                 </div>
                                 <div class="text-center">
-                                    <input type="number" value="${p.防禦 ?? 0}" onchange="window.updateField('${id}', '防禦', parseInt(this.value) || 0)" class="w-20 bg-slate-900 border border-slate-700 rounded text-center text-xl font-bold text-blue-400 py-0.5">
+                                    <input type="number" value="${p.防禦 ?? 0}" onchange="window.updateField('${id}', '防禦', parseInt(this.value) || 0)" class="w-full bg-slate-900 border border-slate-700 rounded text-center text-xl font-bold text-blue-400 py-0.5">
                                 </div>
                                 <div class="flex justify-center gap-1">
                                     <button onclick="window.adjustValue('${id}', '防禦', -1, ${p.防禦 ?? 0})" class="bg-slate-700 hover:bg-slate-600 px-2 py-0.5 rounded text-[10px]">-1</button>
@@ -155,7 +201,7 @@
                             </div>
                         </div>
 
-                        <!-- 3. 常用消耗品區 (消耗品數量可直接修改，+/-保留) -->
+                        <!-- 3. 常用消耗品區 -->
                         <div class="grid grid-cols-2 md:grid-cols-5 gap-2.5 bg-slate-950/40 p-3 rounded-xl border border-slate-800">
                             ${renderItemControl(id, '高效治療繃帶', p.高效治療繃帶)}
                             ${renderItemControl(id, '修為恢復藥劑', p.修為恢復藥劑)}
@@ -216,13 +262,25 @@
             container.innerHTML = `<div class="text-red-500 text-center py-10">初始化失敗：${e.message}</div>`;
         }
 
-        // 輔助生成道具控制元件 (數量可直接輸入，亦有+/-按鈕)
+        // 篩選勾選切換函式
+        window.toggleFilter = function(checkbox) {
+            const id = checkbox.value;
+            if (!activePlayersFilter) activePlayersFilter = [];
+            if (checkbox.checked) {
+                if (!activePlayersFilter.includes(id)) activePlayersFilter.push(id);
+            } else {
+                activePlayersFilter = activePlayersFilter.filter(item => item !== id);
+            }
+            localStorage.setItem('trpg_active_filter', JSON.stringify(activePlayersFilter));
+            location.reload(); // 重新整理以即時套用畫面篩選
+        };
+
         function renderItemControl(id, name, val) {
             const count = val ?? 0;
             return `
                 <div class="bg-slate-800/40 p-2 rounded-lg border border-slate-700/50 flex flex-col items-center justify-between space-y-1">
                     <span class="text-[11px] font-bold text-slate-300 text-center">${name}</span>
-                    <input type="number" value="${count}" onchange="window.updateField('${id}', '${name}', parseInt(this.value) || 0)" class="w-16 bg-slate-900 border border-slate-700 rounded text-center font-bold text-amber-300 text-sm py-0.5">
+                    <input type="number" value="${count}" onchange="window.updateField('${id}', '${name}', parseInt(this.value) || 0)" class="w-full bg-slate-900 border border-slate-700 rounded text-center font-bold text-amber-300 text-sm py-0.5">
                     <div class="flex gap-1">
                         <button onclick="window.adjustValue('${id}', '${name}', -1, ${count})" class="bg-slate-700 hover:bg-slate-600 px-1.5 py-0.5 rounded text-[10px]">-1</button>
                         <button onclick="window.adjustValue('${id}', '${name}', 1, ${count})" class="bg-slate-700 hover:bg-slate-600 px-1.5 py-0.5 rounded text-[10px]">+1</button>
@@ -231,7 +289,6 @@
             `;
         }
 
-        // 裝備欄位輸入框
         function renderEquipInput(id, slotName, val) {
             const dbField = `裝備_${slotName}`;
             return `
@@ -242,7 +299,6 @@
             `;
         }
 
-        // 渲染額外技能列表
         function renderExtraSkills(id, skills) {
             if (!skills || skills.length === 0) return '<div class="text-xs text-slate-500">目前無額外技能</div>';
             return skills.map((sk, idx) => `
@@ -253,7 +309,6 @@
             `).join('');
         }
 
-        // 渲染其餘道具列表
         function renderOtherItemsList(id, items) {
             if (!items || items.length === 0) return '<div class="text-xs text-slate-500 text-center py-0.5">目前無其他道具</div>';
             return items.map((item, idx) => `
@@ -265,7 +320,6 @@
             `).join('');
         }
 
-        // 通用數值增減
         window.adjustValue = async function(playerId, field, delta, currentVal) {
             const newVal = Math.max(0, (currentVal ?? 0) + delta);
             await updateDoc(doc(db, "players", playerId), { [field]: newVal });
@@ -275,30 +329,22 @@
             await updateDoc(doc(db, "players", playerId), { [field]: val });
         };
 
-        // 短休
         window.shortRest = async function(playerId) {
             const docRef = doc(db, "players", playerId);
             const snap = await getDoc(docRef);
             if (snap.exists()) {
                 const d = snap.data();
-                const maxHp = d.生命初始值 ?? 100;
-                const maxMp = d.修為初始值 ?? 50;
-                const maxSpd = d.速度初始值 ?? 10;
-                const maxAtk = d.攻擊初始值 ?? 10;
-                const maxDef = d.防禦初始值 ?? 10;
-
                 await updateDoc(docRef, {
-                    生命值: Math.max(d.生命值 ?? 0, maxHp),
-                    修為: Math.max(d.修為 ?? 0, maxMp),
-                    速度: Math.max(d.速度 ?? 0, maxSpd),
-                    攻擊: Math.max(d.攻擊 ?? 0, maxAtk),
-                    防禦: Math.max(d.防禦 ?? 0, maxDef)
+                    生命值: Math.max(d.生命值 ?? 0, d.生命初始值 ?? 100),
+                    修為: Math.max(d.修為 ?? 0, d.修為初始值 ?? 50),
+                    速度: Math.max(d.速度 ?? 0, d.速度初始值 ?? 10),
+                    攻擊: Math.max(d.攻擊 ?? 0, d.攻擊初始值 ?? 10),
+                    防禦: Math.max(d.防禦 ?? 0, d.防禦初始值 ?? 10)
                 });
                 alert("短休完畢：各項數值已恢復至初始值，溢出的高數值已保留！");
             }
         };
 
-        // 長休
         window.longRest = async function(playerId) {
             const docRef = doc(db, "players", playerId);
             const snap = await getDoc(docRef);
@@ -315,14 +361,12 @@
             }
         };
 
-        // 額外技能管理
         window.addExtraSkill = async function(playerId) {
             const docRef = doc(db, "players", playerId);
             const snap = await getDoc(docRef);
             if (snap.exists()) {
                 const skills = snap.data().額外技能 || [];
-                const updated = [...skills, "新技能"];
-                await updateDoc(docRef, { 額外技能: updated });
+                await updateDoc(docRef, { 額外技能: [...skills, "新技能"] });
             }
         };
 
@@ -346,14 +390,12 @@
             }
         };
 
-        // 其餘道具管理
         window.addOtherItem = async function(playerId) {
             const docRef = doc(db, "players", playerId);
             const snap = await getDoc(docRef);
             if (snap.exists()) {
                 const items = snap.data().其餘道具 || [];
-                const updated = [...items, { name: "新道具", qty: 1 }];
-                await updateDoc(docRef, { 其餘道具: updated });
+                await updateDoc(docRef, { 其餘道具: [...items, { name: "新道具", qty: 1 }] });
             }
         };
 
@@ -387,7 +429,6 @@
             }
         };
 
-        // 建立新角色範本
         window.createNewPlayer = async function() {
             const newId = "player_" + Date.now();
             await setDoc(doc(db, "players", newId), {
