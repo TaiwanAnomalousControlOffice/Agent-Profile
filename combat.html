@@ -50,6 +50,10 @@
         /* 資料庫卡片列表 */
         .template-list { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 10px; margin-top: 10px; }
         .template-card { background: #0f172a; border: 1px solid #334155; padding: 10px; border-radius: 6px; font-size: 0.85rem; }
+        
+        /* 技能與消耗設定網格 */
+        .skill-input-group { background: #0f172a; padding: 8px; border-radius: 6px; margin-top: 6px; border: 1px solid #334155; }
+        .skill-row { display: flex; gap: 6px; margin-top: 4px; }
     </style>
 </head>
 <body>
@@ -79,17 +83,42 @@
         <h2>👹 新增一般魔物至資料庫</h2>
         <div class="form-grid">
             <div><label>魔物名稱 / 代號</label><input type="text" id="m-name" placeholder="例如：山精野怪"></div>
-            <div><label>種族 / 類型</label><input type="text" id="m-race" placeholder="例如：妖獸"></div>
+            <div>
+                <label>屬性</label>
+                <select id="m-element">
+                    <option value="無">無</option>
+                    <option value="金">金</option>
+                    <option value="木">木</option>
+                    <option value="水">水</option>
+                    <option value="火">火</option>
+                    <option value="土">土</option>
+                </select>
+            </div>
             <div><label>速度 (決定順序)</label><input type="number" id="m-speed" value="10"></div>
             <div><label>生命值 (當前 / 初始)</label><input type="number" id="m-hp" value="50"></div>
             <div><label>修為值 (當前 / 初始)</label><input type="number" id="m-mp" value="20"></div>
             <div><label>攻擊力</label><input type="number" id="m-atk" value="15"></div>
             <div><label>防禦力</label><input type="number" id="m-def" value="5"></div>
-            <div><label>技能 1</label><input type="text" id="m-skill1" placeholder="技能描述"></div>
-            <div><label>技能 2</label><input type="text" id="m-skill2" placeholder="技能描述"></div>
-            <div><label>技能 3</label><input type="text" id="m-skill3" placeholder="技能描述"></div>
         </div>
-        <button class="btn-danger" id="add-monster-btn" style="margin-top: 10px;">💾 儲存一般魔物至資料庫</button>
+        
+        <!-- 技能與修為消耗設定 -->
+        <label style="display:block; margin-top:8px; font-weight:bold; color:#38bdf8;">技能與修為消耗設定</label>
+        <div class="skill-input-group">
+            <div class="skill-row">
+                <input type="text" id="m-skill1-name" placeholder="技能 1 名稱" style="flex:2;">
+                <input type="number" id="m-skill1-cost" placeholder="消耗修為" value="5" style="flex:1;">
+            </div>
+            <div class="skill-row">
+                <input type="text" id="m-skill2-name" placeholder="技能 2 名稱" style="flex:2;">
+                <input type="number" id="m-skill2-cost" placeholder="消耗修為" value="10" style="flex:1;">
+            </div>
+            <div class="skill-row">
+                <input type="text" id="m-skill3-name" placeholder="技能 3 名稱" style="flex:2;">
+                <input type="number" id="m-skill3-cost" placeholder="消耗修為" value="15" style="flex:1;">
+            </div>
+        </div>
+
+        <button class="btn-danger" id="add-monster-btn" style="margin-top: 12px;">💾 儲存一般魔物至資料庫</button>
     </div>
 
     <!-- 新增 BOSS 至資料庫面板 -->
@@ -97,17 +126,42 @@
         <h2>👑 創造 BOSS 範本 (自動依參戰人數加成血量)</h2>
         <div class="form-grid">
             <div><label>BOSS 名稱</label><input type="text" id="b-name" placeholder="例如：千年虎妖"></div>
-            <div><label>種族 / 類型</label><input type="text" id="b-race" placeholder="例如：妖王"></div>
+            <div>
+                <label>屬性</label>
+                <select id="b-element">
+                    <option value="土">土</option>
+                    <option value="金">金</option>
+                    <option value="木">木</option>
+                    <option value="水">水</option>
+                    <option value="火">火</option>
+                    <option value="無">無</option>
+                </select>
+            </div>
             <div><label>速度 (決定順序)</label><input type="number" id="b-speed" value="15"></div>
             <div><label>基礎生命值 (1人時的血量)</label><input type="number" id="b-hp" value="30"></div>
             <div><label>修為值 (當前 / 初始)</label><input type="number" id="b-mp" value="50"></div>
             <div><label>攻擊力</label><input type="number" id="b-atk" value="25"></div>
             <div><label>防禦力</label><input type="number" id="b-def" value="10"></div>
-            <div><label>技能 1</label><input type="text" id="b-skill1" placeholder="Boss 技能"></div>
-            <div><label>技能 2</label><input type="text" id="b-skill2" placeholder="Boss 技能"></div>
-            <div><label>技能 3</label><input type="text" id="b-skill3" placeholder="Boss 技能"></div>
         </div>
-        <button class="btn-boss" id="add-boss-btn" style="margin-top: 10px;">💾 儲存 BOSS 範本至資料庫</button>
+
+        <!-- BOSS 技能與修為消耗設定 -->
+        <label style="display:block; margin-top:8px; font-weight:bold; color:#c084fc;">BOSS 技能與修為消耗設定</label>
+        <div class="skill-input-group">
+            <div class="skill-row">
+                <input type="text" id="b-skill1-name" placeholder="Boss 技能 1 名稱" style="flex:2;">
+                <input type="number" id="b-skill1-cost" placeholder="消耗修為" value="10" style="flex:1;">
+            </div>
+            <div class="skill-row">
+                <input type="text" id="b-skill2-name" placeholder="Boss 技能 2 名稱" style="flex:2;">
+                <input type="number" id="b-skill2-cost" placeholder="消耗修為" value="20" style="flex:1;">
+            </div>
+            <div class="skill-row">
+                <input type="text" id="b-skill3-name" placeholder="Boss 技能 3 名稱" style="flex:2;">
+                <input type="number" id="b-skill3-cost" placeholder="消耗修為" value="30" style="flex:1;">
+            </div>
+        </div>
+
+        <button class="btn-boss" id="add-boss-btn" style="margin-top: 12px;">💾 儲存 BOSS 範本至資料庫</button>
     </div>
 
     <script type="module">
@@ -119,8 +173,8 @@
         const templateContainer = document.getElementById("template-container");
         
         let allPlayersData = [];
-        let monsterTemplatesData = []; // 資料庫範本
-        let monstersData = [];          // 目前戰場上的敵人
+        let monsterTemplatesData = []; 
+        let monstersData = [];          
         let selectedPlayerIds = new Set(); 
 
         // 1. 監聽 players 集合
@@ -141,7 +195,7 @@
             checkboxContainer.innerHTML = `<span style="color:#f43f5e;">讀取玩家失敗: ${error.message}</span>`;
         });
 
-        // 2. 監聽 monster_templates 集合 (魔物/BOSS 資料庫)
+        // 2. 監聽 monster_templates 集合
         onSnapshot(collection(db, "monster_templates"), (snapshot) => {
             monsterTemplatesData = [];
             snapshot.forEach((docSnap) => {
@@ -153,7 +207,7 @@
             templateContainer.innerHTML = "<span style='color:#777;'>尚無儲存的魔物範本。</span>";
         });
 
-        // 3. 監聽 monsters 集合 (目前實際參戰中的怪物)
+        // 3. 監聽 monsters 集合
         onSnapshot(collection(db, "monsters"), (snapshot) => {
             monstersData = [];
             snapshot.forEach((docSnap) => {
@@ -164,7 +218,6 @@
             console.log("尚無 monsters 集合或讀取中");
         });
 
-        // 渲染玩家參戰勾選框
         function renderPlayerCheckboxes() {
             if (allPlayersData.length === 0) {
                 checkboxContainer.innerHTML = "<span style='color:#777;'>目前沒有任何玩家資料。</span>";
@@ -197,7 +250,6 @@
             });
         }
 
-        // 渲染魔物資料庫範本清單
         function renderTemplates() {
             if (monsterTemplatesData.length === 0) {
                 templateContainer.innerHTML = "<span style='color:#777; font-size:0.85rem;'>資料庫目前沒有魔物或 BOSS 範本。請在下方新增。</span>";
@@ -213,7 +265,7 @@
                 card.innerHTML = `
                     <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 4px;">
                         <strong style="color: ${isBoss ? '#c084fc' : '#38bdf8'};">${isBoss ? '👑' : '👹'} ${tmpl.姓名}</strong>
-                        <span style="font-size: 0.7rem; color: #94a3b8;">速:${tmpl.速度}</span>
+                        <span style="font-size: 0.7rem; color: #94a3b8; background: #1e293b; padding: 1px 4px; border-radius: 3px;">[${tmpl.屬性 || '無'}] 速:${tmpl.速度}</span>
                     </div>
                     <div style="font-size: 0.75rem; color: #cbd5e1; margin-bottom: 8px;">
                         生命: ${tmpl.生命初始值} | 攻: ${tmpl.攻擊} | 防: ${tmpl.防禦}
@@ -227,12 +279,10 @@
             });
         }
 
-        // 統整並排序渲染
         function updateAndRender() {
             const activePlayers = allPlayersData.filter(p => selectedPlayerIds.has(p.id));
             let allEntities = [...activePlayers, ...monstersData];
 
-            // 依速度由高到低排序
             allEntities.sort((a, b) => {
                 const speedA = Number(a["速度"] !== undefined ? a["速度"] : (a["速度初始值"] || 0));
                 const speedB = Number(b["速度"] !== undefined ? b["速度"] : (b["速度初始值"] || 0));
@@ -257,9 +307,10 @@
                 card.className = `combat-card ${cardClass}`;
 
                 const name = item.姓名 || item.代號 || '未命名';
+                const element = item.屬性 ? `屬性: ${item.屬性}` : '';
                 let tag = `🛡 玩家 (${item.id})`;
-                if (isBoss) tag = '👑 BOSS';
-                else if (isMonster) tag = '👹 魔物';
+                if (isBoss) tag = `👑 BOSS [${element}]`;
+                else if (isMonster) tag = `👹 魔物 [${element}]`;
 
                 const speed = item["速度"] !== undefined ? item["速度"] : (item["速度初始值"] || 0);
                 const hp = item["生命值"] || 0;
@@ -333,12 +384,10 @@
                     </div>
                 `;
 
-                html += `<div class="control-panel" style="max-width: 240px;">`;
+                html += `<div class="control-panel" style="max-width: 250px;">`;
                 
                 if (!isMonster) {
-                    html += `<div style="color: #38bdf8; font-weight: bold; margin-bottom: 6px; display:flex; justify-content:space-between; align-items:center;">
-                        <span>🎒 玩家道具數量調整</span>
-                    </div>`;
+                    html += `<div style="color: #38bdf8; font-weight: bold; margin-bottom: 6px;">🎒 玩家道具數量調整</div>`;
                     html += `<div class="item-grid">
                         <div class="item-row"><span>繃帶</span><input type="number" value="${item["高效治療繃帶"] || 0}" onchange="window.directUpdateStat('${item.id}', 'player', '高效治療繃帶', this.value)"></div>
                         <div class="item-row"><span>藥劑</span><input type="number" value="${item["修為恢復藥劑"] || 0}" onchange="window.directUpdateStat('${item.id}', 'player', '修為恢復藥劑', this.value)"></div>
@@ -347,13 +396,35 @@
                         <div class="item-row" style="grid-column: span 2;"><span>封魔匣</span><input type="number" value="${item["封魔匣"] || 0}" onchange="window.directUpdateStat('${item.id}', 'player', '封魔匣', this.value)"></div>
                     </div>`;
                 } else {
-                    html += `<div style="color: ${isBoss ? '#c084fc' : '#f43f5e'}; font-weight: bold; margin-bottom: 4px;">${isBoss ? '👑 BOSS 技能' : '👹 魔物技能'}</div>`;
-                    html += `<ul style="margin: 4px 0 10px 0; padding-left: 16px; font-size: 0.8rem; color: #cbd5e1;">
-                                <li>${item["技能1"] || '無'}</li>
-                                <li>${item["技能2"] || '無'}</li>
-                                <li>${item["技能3"] || '無'}</li>
-                             </ul>`;
-                    html += `<button class="btn-danger btn-sm" onclick="window.deleteMonsterItem('${item.id}')">撤下${isBoss ? ' BOSS' : '魔物'}</button>`;
+                    html += `<div style="color: ${isBoss ? '#c084fc' : '#f43f5e'}; font-weight: bold; margin-bottom: 6px;">${isBoss ? '👑 技能施放 (自動扣修為)' : '👹 技能施放 (自動扣修為)'}</div>`;
+                    
+                    // 技能 1
+                    if (item.skill1Name && item.skill1Name !== '無') {
+                        html += `<div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px; font-size:0.8rem;">
+                            <span>${item.skill1Name} <b style="color:#38bdf8;">(-${item.skill1Cost || 0})</b></span>
+                            <button class="btn-sm" style="background:${isBoss ? '#a855f7' : '#f43f5e'}; color:#fff;" onclick="window.useMonsterSkill('${item.id}', '${item.skill1Name}', ${item.skill1Cost || 0})">施放</button>
+                        </div>`;
+                    }
+                    // 技能 2
+                    if (item.skill2Name && item.skill2Name !== '無') {
+                        html += `<div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px; font-size:0.8rem;">
+                            <span>${item.skill2Name} <b style="color:#38bdf8;">(-${item.skill2Cost || 0})</b></span>
+                            <button class="btn-sm" style="background:${isBoss ? '#a855f7' : '#f43f5e'}; color:#fff;" onclick="window.useMonsterSkill('${item.id}', '${item.skill2Name}', ${item.skill2Cost || 0})">施放</button>
+                        </div>`;
+                    }
+                    // 技能 3
+                    if (item.skill3Name && item.skill3Name !== '無') {
+                        html += `<div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px; font-size:0.8rem;">
+                            <span>${item.skill3Name} <b style="color:#38bdf8;">(-${item.skill3Cost || 0})</b></span>
+                            <button class="btn-sm" style="background:${isBoss ? '#a855f7' : '#f43f5e'}; color:#fff;" onclick="window.useMonsterSkill('${item.id}', '${item.skill3Name}', ${item.skill3Cost || 0})">施放</button>
+                        </div>`;
+                    }
+
+                    if (!item.skill1Name && !item.skill2Name && !item.skill3Name) {
+                        html += `<div style="color:#94a3b8; font-size:0.75rem; margin-bottom:6px;">無設定主動技能</div>`;
+                    }
+
+                    html += `<button class="btn-danger btn-sm" style="width:100%; margin-top:8px;" onclick="window.deleteMonsterItem('${item.id}')">撤下${isBoss ? ' BOSS' : '魔物'}</button>`;
                 }
 
                 html += `</div>`;
@@ -361,6 +432,29 @@
                 battleList.appendChild(card);
             });
         }
+
+        // 點擊技能按鈕：自動扣除修為
+        window.useMonsterSkill = async (monsterId, skillName, cost) => {
+            const target = monstersData.find(m => m.id === monsterId);
+            if (!target) return;
+
+            const currentMp = Number(target["修為"] || 0);
+            if (currentMp < cost) {
+                alert(`⚠️ 修為不足！${target.姓名} 當前修為 (${currentMp}) 無法施放「${skillName}」(需消耗 ${cost})。`);
+                return;
+            }
+
+            const newMp = currentMp - cost;
+            try {
+                await updateDoc(doc(db, "monsters", monsterId), {
+                    "修為": newMp
+                });
+                console.log(`[技能施放] ${target.姓名} 施放 ${skillName}，消耗修為 ${cost}`);
+            } catch (e) {
+                console.error(e);
+                alert("修為扣除失敗！");
+            }
+        };
 
         // 直接輸入數值修改
         window.directUpdateStat = async (id, collectionType, fieldName, value) => {
@@ -393,7 +487,7 @@
             }
         };
 
-        // 點擊快捷增減按鈕 (-5, -1, +1, +5)
+        // 點擊快捷增減按鈕
         window.adjustStatDirect = async (id, collectionType, fieldName, delta) => {
             const targetCol = collectionType === 'player' ? "players" : "monsters";
             const currentList = collectionType === 'player' ? allPlayersData : monstersData;
@@ -430,7 +524,7 @@
 
             const templateData = {
                 姓名: name, 代號: name, isBoss: false,
-                種族: document.getElementById("m-race").value.trim() || '野生魔物',
+                屬性: document.getElementById("m-element").value,
                 速度: Number(document.getElementById("m-speed").value) || 10,
                 速度初始值: Number(document.getElementById("m-speed").value) || 10,
                 生命值: Number(document.getElementById("m-hp").value) || 50,
@@ -441,9 +535,12 @@
                 攻擊初始值: Number(document.getElementById("m-atk").value) || 15,
                 防禦: Number(document.getElementById("m-def").value) || 5,
                 防禦初始值: Number(document.getElementById("m-def").value) || 5,
-                技能1: document.getElementById("m-skill1").value.trim() || '無',
-                技能2: document.getElementById("m-skill2").value.trim() || '無',
-                技能3: document.getElementById("m-skill3").value.trim() || '無'
+                skill1Name: document.getElementById("m-skill1-name").value.trim(),
+                skill1Cost: Number(document.getElementById("m-skill1-cost").value) || 0,
+                skill2Name: document.getElementById("m-skill2-name").value.trim(),
+                skill2Cost: Number(document.getElementById("m-skill2-cost").value) || 0,
+                skill3Name: document.getElementById("m-skill3-name").value.trim(),
+                skill3Cost: Number(document.getElementById("m-skill3-cost").value) || 0
             };
 
             try {
@@ -453,27 +550,30 @@
             } catch (e) { console.error(e); alert("儲存失敗"); }
         });
 
-        // 新增 BOSS 範本至資料庫
+        // 新增 BOSS 至資料庫
         document.getElementById("add-boss-btn").addEventListener("click", async () => {
             const name = document.getElementById("b-name").value.trim();
             if (!name) { alert("請輸入 BOSS 名稱！"); return; }
 
             const templateData = {
                 姓名: name, 代號: name, isBoss: true,
-                種族: document.getElementById("b-race").value.trim() || '世界 BOSS',
+                屬性: document.getElementById("b-element").value,
                 速度: Number(document.getElementById("b-speed").value) || 15,
                 速度初始值: Number(document.getElementById("b-speed").value) || 15,
                 生命值: Number(document.getElementById("b-hp").value) || 30,
-                生命初始值: Number(document.getElementById("b-hp").value) || 30, // 基準血量，上場時依人數計算
+                生命初始值: Number(document.getElementById("b-hp").value) || 30,
                 修為: Number(document.getElementById("b-mp").value) || 50,
                 修為初始值: Number(document.getElementById("b-mp").value) || 50,
                 攻擊: Number(document.getElementById("b-atk").value) || 25,
                 攻擊初始值: Number(document.getElementById("b-atk").value) || 25,
                 防禦: Number(document.getElementById("b-def").value) || 10,
                 防禦初始值: Number(document.getElementById("b-def").value) || 10,
-                技能1: document.getElementById("b-skill1").value.trim() || '無',
-                技能2: document.getElementById("b-skill2").value.trim() || '無',
-                技能3: document.getElementById("b-skill3").value.trim() || '無'
+                skill1Name: document.getElementById("b-skill1-name").value.trim(),
+                skill1Cost: Number(document.getElementById("b-skill1-cost").value) || 0,
+                skill2Name: document.getElementById("b-skill2-name").value.trim(),
+                skill2Cost: Number(document.getElementById("b-skill2-cost").value) || 0,
+                skill3Name: document.getElementById("b-skill3-name").value.trim(),
+                skill3Cost: Number(document.getElementById("b-skill3-cost").value) || 0
             };
 
             try {
@@ -483,7 +583,7 @@
             } catch (e) { console.error(e); alert("儲存 BOSS 失敗"); }
         });
 
-        // 從資料庫快速召喚敵人到戰場上（支援多人、多隻、血量自動加成）
+        // 快速召喚敵人到戰場上
         window.spawnEnemyFromTemplate = async (templateId) => {
             const tmpl = monsterTemplatesData.find(t => t.id === templateId);
             if (!tmpl) return;
@@ -501,7 +601,6 @@
                 生命值: finalHp,
                 生命初始值: finalHp
             };
-            // 移除 template id 避免衝突
             delete battleInstance.id;
 
             try {
