@@ -8,14 +8,25 @@
         body { font-family: sans-serif; background: #090d16; color: #f1f5f9; padding: 20px; max-width: 1000px; margin: auto; }
         h1, h2 { color: #38bdf8; }
         .panel { background: #1e293b; padding: 20px; border-radius: 8px; margin-bottom: 25px; border: 1px solid #334155; }
-        .combat-card { background: #1e293b; padding: 15px; border-radius: 8px; margin-bottom: 12px; border: 1px solid #475569; display: flex; justify-content: space-between; align-items: flex-start; flex-wrap: wrap; gap: 15px; }
+        .combat-card { background: #1e293b; padding: 15px; border-radius: 8px; margin-bottom: 15px; border: 1px solid #475569; display: flex; justify-content: space-between; align-items: flex-start; flex-wrap: wrap; gap: 15px; }
         .combat-card.monster { border-left: 5px solid #f43f5e; background: #221821; }
         .combat-card.boss { border-left: 5px solid #a855f7; background: #2a1b3d; }
         .combat-card.player { border-left: 5px solid #38bdf8; }
-        .info-group { flex: 1; min-width: 250px; }
-        .stats-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 8px; margin-top: 8px; }
-        .stat-box { background: #0f172a; padding: 6px; border-radius: 4px; text-align: center; font-size: 0.85rem; }
-        .stat-box span { display: block; font-weight: bold; color: #facc15; }
+        .info-group { flex: 1; min-width: 280px; }
+        
+        /* 數值網格與卡片微調 */
+        .stats-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 8px; margin-top: 10px; }
+        .stat-card { background: #0f172a; padding: 8px 6px; border-radius: 6px; text-align: center; border: 1px solid #334155; }
+        .stat-title { font-size: 0.75rem; color: #94a3b8; display: block; margin-bottom: 2px; }
+        .stat-limit { font-size: 0.7rem; color: #cbd5e1; display: block; margin-bottom: 4px; }
+        
+        /* 數值輸入與按鈕優化 */
+        .stat-input { width: 100%; background: transparent; border: none; color: #facc15; font-size: 1.1rem; font-weight: bold; text-align: center; padding: 2px 0; box-sizing: border-box; }
+        .stat-input:focus { outline: 1px solid #38bdf8; border-radius: 4px; background: #1e293b; }
+        .stat-buttons { display: flex; gap: 2px; justify-content: center; margin-top: 6px; }
+        .btn-adjust { background: #1f2937; color: #9ca3af; border: 1px solid #374151; border-radius: 3px; padding: 2px 4px; font-size: 0.7rem; cursor: pointer; flex: 1; }
+        .btn-adjust:hover { background: #374151; color: #ffffff; }
+
         input, select { width: 100%; padding: 6px; background: #0f172a; border: 1px solid #475569; color: #fff; border-radius: 4px; box-sizing: border-box; margin-top: 4px; }
         button { background: #38bdf8; color: #0f172a; border: none; padding: 8px 14px; font-weight: bold; border-radius: 4px; cursor: pointer; }
         button:hover { background: #0ea5e9; }
@@ -28,8 +39,6 @@
         .checkbox-group { display: flex; flex-wrap: wrap; gap: 12px; margin-top: 8px; background: #0f172a; padding: 10px; border-radius: 6px; }
         .checkbox-label { display: flex; align-items: center; gap: 6px; cursor: pointer; color: #cbd5e1; font-size: 0.9rem; }
         .control-panel { background: #0f172a; padding: 10px; border-radius: 6px; flex: 1; min-width: 260px; font-size: 0.85rem; }
-        .inline-inputs { display: flex; gap: 4px; margin-top: 4px; }
-        .inline-inputs input { margin-top: 0; text-align: center; }
     </style>
 </head>
 <body>
@@ -43,7 +52,7 @@
 
     <!-- 玩家參戰勾選面板 -->
     <div class="panel" style="margin-top: 25px;">
-        <h2>🛡️️ 選擇本次參戰玩家</h2>
+        <h2>🛡 選擇本次參戰玩家</h2>
         <div id="player-checkboxes" class="checkbox-group">載入玩家清單中...</div>
     </div>
 
@@ -197,46 +206,81 @@
                 const mpMax = item["修為初始值"] || 0;
                 const atk = item["攻擊"] || 0;
                 const def = item["防禦"] || 0;
+                const colType = isMonster ? 'monster' : 'player';
 
                 let html = `
                     <div class="info-group">
                         <span style="font-size: 0.8rem; color: #94a3b8;">#${index + 1} | ${tag}</span>
                         <h3 style="margin: 2px 0 6px 0;">${name}</h3>
                         <div class="stats-grid">
-                            <div class="stat-box">生命 <span>${hp}/${hpMax}</span></div>
-                            <div class="stat-box">修為 <span>${mp}/${mpMax}</span></div>
-                            <div class="stat-box" style="color:#38bdf8;">速度 <span>${speed}</span></div>
-                            <div class="stat-box">攻擊 <span>${atk}</span></div>
-                            <div class="stat-box">防禦 <span>${def}</span></div>
+                            <!-- 生命值卡片 -->
+                            <div class="stat-card">
+                                <span class="stat-title">生命</span>
+                                <span class="stat-limit">上限: ${hpMax}</span>
+                                <input type="number" class="stat-input" value="${hp}" onchange="window.directUpdateStat('${item.id}', '${colType}', '生命值', this.value)">
+                                <div class="stat-buttons">
+                                    <button class="btn-adjust" onclick="window.adjustStatDirect('${item.id}', '${colType}', '生命值', -5)">-5</button>
+                                    <button class="btn-adjust" onclick="window.adjustStatDirect('${item.id}', '${colType}', '生命值', -1)">-1</button>
+                                    <button class="btn-adjust" onclick="window.adjustStatDirect('${item.id}', '${colType}', '生命值', 1)">+1</button>
+                                    <button class="btn-adjust" onclick="window.adjustStatDirect('${item.id}', '${colType}', '生命值', 5)">+5</button>
+                                </div>
+                            </div>
+                            <!-- 修為值卡片 -->
+                            <div class="stat-card">
+                                <span class="stat-title">修為</span>
+                                <span class="stat-limit">上限: ${mpMax}</span>
+                                <input type="number" class="stat-input" value="${mp}" onchange="window.directUpdateStat('${item.id}', '${colType}', '修為', this.value)">
+                                <div class="stat-buttons">
+                                    <button class="btn-adjust" onclick="window.adjustStatDirect('${item.id}', '${colType}', '修為', -5)">-5</button>
+                                    <button class="btn-adjust" onclick="window.adjustStatDirect('${item.id}', '${colType}', '修為', -1)">-1</button>
+                                    <button class="btn-adjust" onclick="window.adjustStatDirect('${item.id}', '${colType}', '修為', 1)">+1</button>
+                                    <button class="btn-adjust" onclick="window.adjustStatDirect('${item.id}', '${colType}', '修為', 5)">+5</button>
+                                </div>
+                            </div>
+                            <!-- 速度卡片 -->
+                            <div class="stat-card">
+                                <span class="stat-title" style="color:#38bdf8;">速度</span>
+                                <span class="stat-limit">&nbsp;</span>
+                                <input type="number" class="stat-input" value="${speed}" onchange="window.directUpdateStat('${item.id}', '${colType}', '速度', this.value)">
+                                <div class="stat-buttons">
+                                    <button class="btn-adjust" onclick="window.adjustStatDirect('${item.id}', '${colType}', '速度', -1)">-1</button>
+                                    <button class="btn-adjust" onclick="window.adjustStatDirect('${item.id}', '${colType}', '速度', 1)">+1</button>
+                                </div>
+                            </div>
+                            <!-- 攻擊卡片 -->
+                            <div class="stat-card">
+                                <span class="stat-title">攻擊</span>
+                                <span class="stat-limit">&nbsp;</span>
+                                <input type="number" class="stat-input" value="${atk}" onchange="window.directUpdateStat('${item.id}', '${colType}', '攻擊', this.value)">
+                                <div class="stat-buttons">
+                                    <button class="btn-adjust" onclick="window.adjustStatDirect('${item.id}', '${colType}', '攻擊', -1)">-1</button>
+                                    <button class="btn-adjust" onclick="window.adjustStatDirect('${item.id}', '${colType}', '攻擊', 1)">+1</button>
+                                </div>
+                            </div>
+                            <!-- 防禦卡片 -->
+                            <div class="stat-card">
+                                <span class="stat-title">防禦</span>
+                                <span class="stat-limit">&nbsp;</span>
+                                <input type="number" class="stat-input" value="${def}" onchange="window.directUpdateStat('${item.id}', '${colType}', '防禦', this.value)">
+                                <div class="stat-buttons">
+                                    <button class="btn-adjust" onclick="window.adjustStatDirect('${item.id}', '${colType}', '防禦', -1)">-1</button>
+                                    <button class="btn-adjust" onclick="window.adjustStatDirect('${item.id}', '${colType}', '防禦', 1)">+1</button>
+                                </div>
+                            </div>
                         </div>
                     </div>
                 `;
 
-                html += `<div class="control-panel">`;
+                html += `<div class="control-panel" style="max-width: 240px;">`;
                 
                 if (!isMonster) {
-                    html += `<div style="color: #38bdf8; font-weight: bold; margin-bottom: 4px;">🛡️ 玩家狀態與數值操控</div>`;
-                    html += `<div class="inline-inputs">
-                                <input type="number" id="val-hp-${item.id}" placeholder="扣血/補血數值" style="flex:2;">
-                                <button class="btn-sm btn-danger" onclick="window.adjustStat('${item.id}', 'player', '生命值', 'sub', 'val-hp-${item.id}')">扣血</button>
-                                <button class="btn-sm" onclick="window.adjustStat('${item.id}', 'player', '生命值', 'add', 'val-hp-${item.id}')">治療</button>
-                             </div>`;
-                    html += `<div class="inline-inputs" style="margin-top:6px;">
-                                <input type="number" id="val-mp-${item.id}" placeholder="修為增減" style="flex:2;">
-                                <button class="btn-sm btn-danger" onclick="window.adjustStat('${item.id}', 'player', '修為', 'sub', 'val-mp-${item.id}')">消耗</button>
-                                <button class="btn-sm" onclick="window.adjustStat('${item.id}', 'player', '修為', 'add', 'val-mp-${item.id}')">恢復</button>
-                             </div>`;
-                    html += `<div style="font-size: 0.8rem; margin-top: 6px; color: #cbd5e1;">
-                                繃帶: ${item["繃帶"] || 0} | 藥劑: ${item["修為恢復藥劑"] || 0} | 解錠: ${item["異常解錠"] || 0}<br>解咒: ${item["解咒符"] || 0} | 封魔: ${item["封魔匣"] || 0}
+                    html += `<div style="color: #38bdf8; font-weight: bold; margin-bottom: 6px;">🎒 玩家道具攜帶量</div>`;
+                    html += `<div style="font-size: 0.85rem; color: #cbd5e1; line-height: 1.5;">
+                                繃帶: ${item["繃帶"] || 0} | 藥劑: ${item["修為恢復藥劑"] || 0}<br>解錠: ${item["異常解錠"] || 0} | 解咒: ${item["解咒符"] || 0}<br>封魔: ${item["封魔匣"] || 0}
                              </div>`;
                 } else {
-                    html += `<div style="color: ${isBoss ? '#c084fc' : '#f43f5e'}; font-weight: bold; margin-bottom: 4px;">${isBoss ? '👑 BOSS 操控面板' : '👹 魔物操控面板'}</div>`;
-                    html += `<div class="inline-inputs">
-                                <input type="number" id="val-hp-${item.id}" placeholder="傷害/治療值" style="flex:2;">
-                                <button class="btn-sm btn-danger" onclick="window.adjustStat('${item.id}', 'monster', '生命值', 'sub', 'val-hp-${item.id}')">造成傷害</button>
-                                <button class="btn-sm" onclick="window.adjustStat('${item.id}', 'monster', '生命值', 'add', 'val-hp-${item.id}')">回血</button>
-                             </div>`;
-                    html += `<ul style="margin: 6px 0; padding-left: 16px; font-size: 0.8rem; color: #cbd5e1;">
+                    html += `<div style="color: ${isBoss ? '#c084fc' : '#f43f5e'}; font-weight: bold; margin-bottom: 4px;">${isBoss ? '👑 BOSS 技能' : '👹 魔物技能'}</div>`;
+                    html += `<ul style="margin: 4px 0 10px 0; padding-left: 16px; font-size: 0.8rem; color: #cbd5e1;">
                                 <li>${item["技能1"] || '無'}</li>
                                 <li>${item["技能2"] || '無'}</li>
                                 <li>${item["技能3"] || '無'}</li>
@@ -250,13 +294,39 @@
             });
         }
 
-        window.adjustStat = async (id, collectionType, fieldName, action, inputId) => {
-            const inputVal = Number(document.getElementById(inputId).value);
-            if (!inputVal || inputVal <= 0) {
-                alert("請輸入有效的數值！");
-                return;
+        // 直接輸入數值修改
+        window.directUpdateStat = async (id, collectionType, fieldName, value) => {
+            const targetCol = collectionType === 'player' ? "players" : "monsters";
+            const currentList = collectionType === 'player' ? allPlayersData : monstersData;
+            const targetItem = currentList.find(i => i.id === id);
+            
+            if (!targetItem) return;
+
+            let newValue = Number(value);
+            if (isNaN(newValue)) return;
+
+            let maxVal = fieldName === '生命值' ? Number(targetItem['生命初始值'] || 999999) : 
+                         fieldName === '修為' ? Number(targetItem['修為初始值'] || 999999) : 999999;
+
+            if (fieldName === '生命值' || fieldName === '修為') {
+                if (newValue < 0) newValue = 0;
+                if (newValue > maxVal) newValue = maxVal;
+            } else {
+                if (newValue < 0) newValue = 0;
             }
 
+            try {
+                await updateDoc(doc(db, targetCol, id), {
+                    [fieldName]: newValue
+                });
+            } catch (e) {
+                console.error(e);
+                alert("數值更新失敗！");
+            }
+        };
+
+        // 點擊快捷增減按鈕 (-5, -1, +1, +5)
+        window.adjustStatDirect = async (id, collectionType, fieldName, delta) => {
             const targetCol = collectionType === 'player' ? "players" : "monsters";
             const currentList = collectionType === 'player' ? allPlayersData : monstersData;
             const targetItem = currentList.find(i => i.id === id);
@@ -264,20 +334,21 @@
             if (!targetItem) return;
 
             let currentVal = Number(targetItem[fieldName] || 0);
-            let maxVal = fieldName === '生命值' ? Number(targetItem['生命初始值'] || currentVal) : 
-                         fieldName === '修為' ? Number(targetItem['修為初始值'] || currentVal) : 999999;
+            let maxVal = fieldName === '生命值' ? Number(targetItem['生命初始值'] || 999999) : 
+                         fieldName === '修為' ? Number(targetItem['修為初始值'] || 999999) : 999999;
 
-            let finalVal = action === 'add' ? currentVal + inputVal : currentVal - inputVal;
+            let finalVal = currentVal + delta;
             if (fieldName === '生命值' || fieldName === '修為') {
                 if (finalVal < 0) finalVal = 0;
                 if (finalVal > maxVal) finalVal = maxVal;
+            } else {
+                if (finalVal < 0) finalVal = 0;
             }
 
             try {
                 await updateDoc(doc(db, targetCol, id), {
                     [fieldName]: finalVal
                 });
-                document.getElementById(inputId).value = "";
             } catch (e) {
                 console.error(e);
                 alert("數值更新失敗！");
