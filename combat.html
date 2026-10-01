@@ -34,11 +34,22 @@
         .btn-danger:hover { background: #e11d48; }
         .btn-boss { background: #a855f7; color: #fff; }
         .btn-boss:hover { background: #9333ea; }
+        .btn-secondary { background: #334155; color: #cbd5e1; }
+        .btn-secondary:hover { background: #475569; color: #fff; }
         .btn-sm { padding: 4px 8px; font-size: 0.75rem; font-weight: bold; }
         .form-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-bottom: 10px; }
         .checkbox-group { display: flex; flex-wrap: wrap; gap: 12px; margin-top: 8px; background: #0f172a; padding: 10px; border-radius: 6px; }
         .checkbox-label { display: flex; align-items: center; gap: 6px; cursor: pointer; color: #cbd5e1; font-size: 0.9rem; }
         .control-panel { background: #0f172a; padding: 10px; border-radius: 6px; flex: 1; min-width: 260px; font-size: 0.85rem; }
+        
+        /* 道具調整網格 */
+        .item-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 4px; margin-top: 6px; }
+        .item-row { display: flex; align-items: center; justify-content: space-between; background: #1e293b; padding: 2px 6px; border-radius: 4px; font-size: 0.75rem; }
+        .item-row input { width: 40px; padding: 2px; text-align: center; font-size: 0.8rem; background: #0f172a; color: #facc15; border: 1px solid #475569; }
+        
+        /* 資料庫卡片列表 */
+        .template-list { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 10px; margin-top: 10px; }
+        .template-card { background: #0f172a; border: 1px solid #334155; padding: 10px; border-radius: 6px; font-size: 0.85rem; }
     </style>
 </head>
 <body>
@@ -56,9 +67,16 @@
         <div id="player-checkboxes" class="checkbox-group">載入玩家清單中...</div>
     </div>
 
-    <!-- 新增一般魔物面板 -->
+    <!-- 魔物與 BOSS 範本資料庫面板 -->
+    <div class="panel" style="border-color: #64748b;">
+        <h2>📚 魔物 / BOSS 範本資料庫 (可重複快速召喚)</h2>
+        <p style="font-size: 0.85rem; color: #94a3b8; margin-top: -5px;">在此建立常用敵人的數值模板，點擊「快速上場」即可一鍵部署到戰場上（支援同種魔物多次上場）。</p>
+        <div id="template-container" class="template-list">載入範本資料庫中...</div>
+    </div>
+
+    <!-- 新增一般魔物至資料庫面板 -->
     <div class="panel">
-        <h2>👹 新增一般魔物</h2>
+        <h2>👹 新增一般魔物至資料庫</h2>
         <div class="form-grid">
             <div><label>魔物名稱 / 代號</label><input type="text" id="m-name" placeholder="例如：山精野怪"></div>
             <div><label>種族 / 類型</label><input type="text" id="m-race" placeholder="例如：妖獸"></div>
@@ -71,12 +89,12 @@
             <div><label>技能 2</label><input type="text" id="m-skill2" placeholder="技能描述"></div>
             <div><label>技能 3</label><input type="text" id="m-skill3" placeholder="技能描述"></div>
         </div>
-        <button class="btn-danger" id="add-monster-btn" style="margin-top: 10px;">➕ 建立一般魔物</button>
+        <button class="btn-danger" id="add-monster-btn" style="margin-top: 10px;">💾 儲存一般魔物至資料庫</button>
     </div>
 
-    <!-- 新增 BOSS 面板 -->
+    <!-- 新增 BOSS 至資料庫面板 -->
     <div class="panel" style="border-color: #a855f7;">
-        <h2>👑 創造 BOSS (自動依參戰人數加成血量)</h2>
+        <h2>👑 創造 BOSS 範本 (自動依參戰人數加成血量)</h2>
         <div class="form-grid">
             <div><label>BOSS 名稱</label><input type="text" id="b-name" placeholder="例如：千年虎妖"></div>
             <div><label>種族 / 類型</label><input type="text" id="b-race" placeholder="例如：妖王"></div>
@@ -89,7 +107,7 @@
             <div><label>技能 2</label><input type="text" id="b-skill2" placeholder="Boss 技能"></div>
             <div><label>技能 3</label><input type="text" id="b-skill3" placeholder="Boss 技能"></div>
         </div>
-        <button class="btn-boss" id="add-boss-btn" style="margin-top: 10px;">👑 生成 BOSS (自動計算血量加成)</button>
+        <button class="btn-boss" id="add-boss-btn" style="margin-top: 10px;">💾 儲存 BOSS 範本至資料庫</button>
     </div>
 
     <script type="module">
@@ -98,12 +116,14 @@
 
         const battleList = document.getElementById("battle-list");
         const checkboxContainer = document.getElementById("player-checkboxes");
+        const templateContainer = document.getElementById("template-container");
         
         let allPlayersData = [];
-        let monstersData = [];
+        let monsterTemplatesData = []; // 資料庫範本
+        let monstersData = [];          // 目前戰場上的敵人
         let selectedPlayerIds = new Set(); 
 
-        // 監聽 players 集合
+        // 1. 監聽 players 集合
         onSnapshot(collection(db, "players"), (snapshot) => {
             allPlayersData = [];
             snapshot.forEach((docSnap) => {
@@ -121,7 +141,19 @@
             checkboxContainer.innerHTML = `<span style="color:#f43f5e;">讀取玩家失敗: ${error.message}</span>`;
         });
 
-        // 監聽 monsters 集合
+        // 2. 監聽 monster_templates 集合 (魔物/BOSS 資料庫)
+        onSnapshot(collection(db, "monster_templates"), (snapshot) => {
+            monsterTemplatesData = [];
+            snapshot.forEach((docSnap) => {
+                monsterTemplatesData.push({ id: docSnap.id, ...docSnap.data() });
+            });
+            renderTemplates();
+        }, (error) => {
+            console.log("尚無 monster_templates 集合或讀取中");
+            templateContainer.innerHTML = "<span style='color:#777;'>尚無儲存的魔物範本。</span>";
+        });
+
+        // 3. 監聽 monsters 集合 (目前實際參戰中的怪物)
         onSnapshot(collection(db, "monsters"), (snapshot) => {
             monstersData = [];
             snapshot.forEach((docSnap) => {
@@ -162,6 +194,36 @@
                     }
                     updateAndRender();
                 });
+            });
+        }
+
+        // 渲染魔物資料庫範本清單
+        function renderTemplates() {
+            if (monsterTemplatesData.length === 0) {
+                templateContainer.innerHTML = "<span style='color:#777; font-size:0.85rem;'>資料庫目前沒有魔物或 BOSS 範本。請在下方新增。</span>";
+                return;
+            }
+
+            templateContainer.innerHTML = "";
+            monsterTemplatesData.forEach(tmpl => {
+                const isBoss = tmpl.isBoss;
+                const card = document.createElement("div");
+                card.className = "template-card";
+                card.style.borderColor = isBoss ? '#a855f7' : '#475569';
+                card.innerHTML = `
+                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 4px;">
+                        <strong style="color: ${isBoss ? '#c084fc' : '#38bdf8'};">${isBoss ? '👑' : '👹'} ${tmpl.姓名}</strong>
+                        <span style="font-size: 0.7rem; color: #94a3b8;">速:${tmpl.速度}</span>
+                    </div>
+                    <div style="font-size: 0.75rem; color: #cbd5e1; margin-bottom: 8px;">
+                        生命: ${tmpl.生命初始值} | 攻: ${tmpl.攻擊} | 防: ${tmpl.防禦}
+                    </div>
+                    <div style="display:flex; gap: 4px;">
+                        <button class="btn-sm" style="flex:1; background:${isBoss ? '#a855f7' : '#38bdf8'}; color:#0f172a;" onclick="window.spawnEnemyFromTemplate('${tmpl.id}')">⚡ 快速上場</button>
+                        <button class="btn-sm btn-danger" onclick="window.deleteTemplate('${tmpl.id}')">刪除</button>
+                    </div>
+                `;
+                templateContainer.appendChild(card);
             });
         }
 
@@ -274,10 +336,16 @@
                 html += `<div class="control-panel" style="max-width: 240px;">`;
                 
                 if (!isMonster) {
-                    html += `<div style="color: #38bdf8; font-weight: bold; margin-bottom: 6px;">🎒 玩家道具攜帶量</div>`;
-                    html += `<div style="font-size: 0.85rem; color: #cbd5e1; line-height: 1.5;">
-                                繃帶: ${item["高效治療繃帶"] || 0} | 藥劑: ${item["修為恢復藥劑"] || 0}<br>解錠: ${item["異常解除錠"] || 0} | 解咒: ${item["解咒符"] || 0}<br>封魔: ${item["封魔匣"] || 0}
-                             </div>`;
+                    html += `<div style="color: #38bdf8; font-weight: bold; margin-bottom: 6px; display:flex; justify-content:space-between; align-items:center;">
+                        <span>🎒 玩家道具數量調整</span>
+                    </div>`;
+                    html += `<div class="item-grid">
+                        <div class="item-row"><span>繃帶</span><input type="number" value="${item["高效治療繃帶"] || 0}" onchange="window.directUpdateStat('${item.id}', 'player', '高效治療繃帶', this.value)"></div>
+                        <div class="item-row"><span>藥劑</span><input type="number" value="${item["修為恢復藥劑"] || 0}" onchange="window.directUpdateStat('${item.id}', 'player', '修為恢復藥劑', this.value)"></div>
+                        <div class="item-row"><span>解錠</span><input type="number" value="${item["異常解除錠"] || 0}" onchange="window.directUpdateStat('${item.id}', 'player', '異常解除錠', this.value)"></div>
+                        <div class="item-row"><span>解咒</span><input type="number" value="${item["解咒符"] || 0}" onchange="window.directUpdateStat('${item.id}', 'player', '解咒符', this.value)"></div>
+                        <div class="item-row" style="grid-column: span 2;"><span>封魔匣</span><input type="number" value="${item["封魔匣"] || 0}" onchange="window.directUpdateStat('${item.id}', 'player', '封魔匣', this.value)"></div>
+                    </div>`;
                 } else {
                     html += `<div style="color: ${isBoss ? '#c084fc' : '#f43f5e'}; font-weight: bold; margin-bottom: 4px;">${isBoss ? '👑 BOSS 技能' : '👹 魔物技能'}</div>`;
                     html += `<ul style="margin: 4px 0 10px 0; padding-left: 16px; font-size: 0.8rem; color: #cbd5e1;">
@@ -285,7 +353,7 @@
                                 <li>${item["技能2"] || '無'}</li>
                                 <li>${item["技能3"] || '無'}</li>
                              </ul>`;
-                    html += `<button class="btn-danger btn-sm" onclick="window.deleteMonsterItem('${item.id}')">移除${isBoss ? ' BOSS' : '魔物'}</button>`;
+                    html += `<button class="btn-danger btn-sm" onclick="window.deleteMonsterItem('${item.id}')">撤下${isBoss ? ' BOSS' : '魔物'}</button>`;
                 }
 
                 html += `</div>`;
@@ -355,11 +423,12 @@
             }
         };
 
+        // 新增一般魔物至資料庫
         document.getElementById("add-monster-btn").addEventListener("click", async () => {
             const name = document.getElementById("m-name").value.trim();
             if (!name) { alert("請輸入魔物名稱！"); return; }
 
-            const newMonster = {
+            const templateData = {
                 姓名: name, 代號: name, isBoss: false,
                 種族: document.getElementById("m-race").value.trim() || '野生魔物',
                 速度: Number(document.getElementById("m-speed").value) || 10,
@@ -378,30 +447,24 @@
             };
 
             try {
-                await addDoc(collection(db, "monsters"), newMonster);
-                alert("魔物新增成功！");
+                await addDoc(collection(db, "monster_templates"), templateData);
+                alert("魔物範本已成功存入資料庫！");
                 document.getElementById("m-name").value = "";
-            } catch (e) { console.error(e); alert("新增失敗"); }
+            } catch (e) { console.error(e); alert("儲存失敗"); }
         });
 
+        // 新增 BOSS 範本至資料庫
         document.getElementById("add-boss-btn").addEventListener("click", async () => {
             const name = document.getElementById("b-name").value.trim();
             if (!name) { alert("請輸入 BOSS 名稱！"); return; }
 
-            const activePlayerCount = selectedPlayerIds.size;
-            const baseHp = Number(document.getElementById("b-hp").value) || 30;
-
-            const count = Math.max(activePlayerCount, 1);
-            const multiplier = 1 + (count - 1) * 0.5;
-            const finalHp = Math.round(baseHp * multiplier);
-
-            const newBoss = {
+            const templateData = {
                 姓名: name, 代號: name, isBoss: true,
                 種族: document.getElementById("b-race").value.trim() || '世界 BOSS',
                 速度: Number(document.getElementById("b-speed").value) || 15,
                 速度初始值: Number(document.getElementById("b-speed").value) || 15,
-                生命值: finalHp,
-                生命初始值: finalHp,
+                生命值: Number(document.getElementById("b-hp").value) || 30,
+                生命初始值: Number(document.getElementById("b-hp").value) || 30, // 基準血量，上場時依人數計算
                 修為: Number(document.getElementById("b-mp").value) || 50,
                 修為初始值: Number(document.getElementById("b-mp").value) || 50,
                 攻擊: Number(document.getElementById("b-atk").value) || 25,
@@ -414,12 +477,53 @@
             };
 
             try {
-                await addDoc(collection(db, "monsters"), newBoss);
-                alert(`👑 BOSS 生成成功！\n參戰人數：${count} 人\n血量倍率：${multiplier} 倍\n最終 BOSS 血量：${finalHp}`);
+                await addDoc(collection(db, "monster_templates"), templateData);
+                alert("👑 BOSS 範本已成功存入資料庫！");
                 document.getElementById("b-name").value = "";
-            } catch (e) { console.error(e); alert("生成 BOSS 失敗"); }
+            } catch (e) { console.error(e); alert("儲存 BOSS 失敗"); }
         });
 
+        // 從資料庫快速召喚敵人到戰場上（支援多人、多隻、血量自動加成）
+        window.spawnEnemyFromTemplate = async (templateId) => {
+            const tmpl = monsterTemplatesData.find(t => t.id === templateId);
+            if (!tmpl) return;
+
+            let finalHp = tmpl.生命初始值;
+            if (tmpl.isBoss) {
+                const activePlayerCount = selectedPlayerIds.size;
+                const count = Math.max(activePlayerCount, 1);
+                const multiplier = 1 + (count - 1) * 0.5;
+                finalHp = Math.round(tmpl.生命初始值 * multiplier);
+            }
+
+            const battleInstance = {
+                ...tmpl,
+                生命值: finalHp,
+                生命初始值: finalHp
+            };
+            // 移除 template id 避免衝突
+            delete battleInstance.id;
+
+            try {
+                await addDoc(collection(db, "monsters"), battleInstance);
+                if (tmpl.isBoss) {
+                    alert(`👑 BOSS [${tmpl.姓名}] 已上場！\n參戰人數：${selectedPlayerIds.size} 人\n最終血量：${finalHp}`);
+                }
+            } catch (e) {
+                console.error(e);
+                alert("召喚失敗！");
+            }
+        };
+
+        // 刪除資料庫範本
+        window.deleteTemplate = async (id) => {
+            if (!confirm("確定要從資料庫刪除這個範本嗎？")) return;
+            try {
+                await deleteDoc(doc(db, "monster_templates", id));
+            } catch (e) { console.error(e); alert("刪除失敗"); }
+        };
+
+        // 從戰場撤下怪物
         window.deleteMonsterItem = async (id) => {
             if (!confirm("確定要將其從戰鬥中移除嗎？")) return;
             try {
