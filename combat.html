@@ -58,7 +58,7 @@
 </head>
 <body>
 
-    <h1>⚔️ TRPG 戰鬥動態排序與 Boss 面板</h1>
+    <h1>⚔️ TRPG 戰鬥動態排序與 Boss 面板[cite: 10]</h1>
     <p style="color: #94a3b8;">勾選參戰玩家，系統將自動依據人數計算 Boss 血量加成，並統一按速度排序。</p>
 
     <!-- 戰鬥序列列表 -->
@@ -226,7 +226,7 @@
 
             checkboxContainer.innerHTML = "";
             allPlayersData.forEach(p => {
-                const isChecked = selectedPlayerIds.has(p.姓名);
+                const isChecked = selectedPlayerIds.has(p.id);
                 const name = p.代號 || p.姓名 || p.id;
                 const label = document.createElement("label");
                 label.className = "checkbox-label";
@@ -326,40 +326,55 @@
                         <span style="font-size: 0.8rem; color: #94a3b8;">#${index + 1} | ${tag}</span>
                         <h3 style="margin: 2px 0 6px 0;">${name}</h3>
                         <div class="stats-grid">
-                           <!-- 生命值卡片範例 -->
-<div class="stat-card">
-  <div class="stat-label">生命</div>
-  <div class="stat-value" id="hp-display-${id}">${currentHp}/${maxHp}</div>
-  <div class="stat-buttons">...</div>
-</div>
-
-<!-- 修為卡片範例 -->
-<div class="stat-card">
-  <div class="stat-label">修為</div>
-  <div class="stat-value" id="mp-display-${id}">${currentMp}/${maxMp}</div>
-  <div class="stat-buttons">...</div>
-</div>
-
-<!-- 速度卡片範例 -->
-<div class="stat-card">
-  <div class="stat-label">速度</div>
-  <div class="stat-value" id="speed-display-${id}">${currentSpeed}/${maxSpeed}</div>
-  <div class="stat-buttons">...</div>
-</div>
-
-<!-- 攻擊卡片範例 -->
-<div class="stat-card">
-  <div class="stat-label">攻擊</div>
-  <div class="stat-value" id="atk-display-${id}">${currentAtk}/${maxAtk}</div>
-  <div class="stat-buttons">...</div>
-</div>
-
-<!-- 防禦卡片範例 -->
-<div class="stat-card">
-  <div class="stat-label">防禦</div>
-  <div class="stat-value" id="def-display-${id}">${currentDef}/${maxDef}</div>
-  <div class="stat-buttons">...</div>
-</div>
+                            <!-- 生命值 -->
+                            <div class="stat-card">
+                                <span class="stat-title">生命</span>
+                                <span class="stat-limit">/ ${hpMax}</span>
+                                <input type="number" class="stat-input" value="${hp}" onchange="window.directUpdateStat('${item.id}', '${colType}', '生命值', this.value)">
+                                <div class="stat-buttons">
+                                    <button class="btn-adjust" onclick="window.adjustStatDirect('${item.id}', '${colType}', '生命值', -10)">-10</button>
+                                    <button class="btn-adjust" onclick="window.adjustStatDirect('${item.id}', '${colType}', '生命值', 10)">+10</button>
+                                </div>
+                            </div>
+                            <!-- 修為 -->
+                            <div class="stat-card">
+                                <span class="stat-title">修為</span>
+                                <span class="stat-limit">/ ${mpMax}</span>
+                                <input type="number" class="stat-input" value="${mp}" onchange="window.directUpdateStat('${item.id}', '${colType}', '修為', this.value)">
+                                <div class="stat-buttons">
+                                    <button class="btn-adjust" onclick="window.adjustStatDirect('${item.id}', '${colType}', '修為', -5)">-5</button>
+                                    <button class="btn-adjust" onclick="window.adjustStatDirect('${item.id}', '${colType}', '修為', 5)">+5</button>
+                                </div>
+                            </div>
+                            <!-- 速度 -->
+                            <div class="stat-card">
+                                <span class="stat-title">速度</span>
+                                <span class="stat-limit">&nbsp;</span>
+                                <input type="number" class="stat-input" value="${speed}" onchange="window.directUpdateStat('${item.id}', '${colType}', '速度', this.value)">
+                                <div class="stat-buttons">
+                                    <button class="btn-adjust" onclick="window.adjustStatDirect('${item.id}', '${colType}', '速度', -1)">-1</button>
+                                    <button class="btn-adjust" onclick="window.adjustStatDirect('${item.id}', '${colType}', '速度', 1)">+1</button>
+                                </div>
+                            </div>
+                            <!-- 攻擊 -->
+                            <div class="stat-card">
+                                <span class="stat-title">攻擊</span>
+                                <span class="stat-limit">&nbsp;</span>
+                                <input type="number" class="stat-input" value="${atk}" onchange="window.directUpdateStat('${item.id}', '${colType}', '攻擊', this.value)">
+                                <div class="stat-buttons">
+                                    <button class="btn-adjust" onclick="window.adjustStatDirect('${item.id}', '${colType}', '攻擊', -2)">-2</button>
+                                    <button class="btn-adjust" onclick="window.adjustStatDirect('${item.id}', '${colType}', '攻擊', 2)">+2</button>
+                                </div>
+                            </div>
+                            <!-- 防禦 -->
+                            <div class="stat-card">
+                                <span class="stat-title">防禦</span>
+                                <span class="stat-limit">&nbsp;</span>
+                                <input type="number" class="stat-input" value="${def}" onchange="window.directUpdateStat('${item.id}', '${colType}', '防禦', this.value)">
+                                <div class="stat-buttons">
+                                    <button class="btn-adjust" onclick="window.adjustStatDirect('${item.id}', '${colType}', '防禦', -2)">-2</button>
+                                    <button class="btn-adjust" onclick="window.adjustStatDirect('${item.id}', '${colType}', '防禦', 2)">+2</button>
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -421,7 +436,7 @@
 
             const currentMp = Number(target["修為"] || 0);
             if (currentMp < cost) {
-                alert(`⚠️ 修為不足！${target.姓名} 當前修為 (${currentMp}) 無法施放「${skillName}」(需消耗 ${cost})。`);
+                alert(`⚠️️ 修為不足！${target.姓名} 當前修為 (${currentMp}) 無法施放「${skillName}」(需消耗 ${cost})。`);
                 return;
             }
 
