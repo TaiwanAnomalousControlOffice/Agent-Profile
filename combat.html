@@ -43,7 +43,7 @@
 
     <!-- 玩家參戰勾選面板 -->
     <div class="panel" style="margin-top: 25px;">
-        <h2>🛡️ 選擇本次參戰玩家</h2>
+        <h2>🛡️️ 選擇本次參戰玩家</h2>
         <div id="player-checkboxes" class="checkbox-group">載入玩家清單中...</div>
     </div>
 
@@ -84,7 +84,8 @@
     </div>
 
     <script type="module">
-        import { db, collection, onSnapshot, addDoc, deleteDoc, doc, updateDoc } from "./firebase-config.js";
+        import { db } from "./firebase-config.js";
+        import { collection, onSnapshot, addDoc, deleteDoc, doc, updateDoc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
         const battleList = document.getElementById("battle-list");
         const checkboxContainer = document.getElementById("player-checkboxes");
