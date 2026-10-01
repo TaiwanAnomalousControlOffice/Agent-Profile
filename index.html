@@ -28,7 +28,8 @@
             
             onSnapshot(docRef, (docSnap) => {
                 if (!docSnap.exists()) {
-                    container.innerHTML = `<div class="text-center py-20 text-red-400">找不到此角色 ID (<b>${playerId</b>}) 的資料。<br>請確認 Firebase 的 "players" 集合中是否有建立這個 ID 的文件。</div>`;
+                    // 【已修正】補上正確的變數括號 ${playerId}
+                    container.innerHTML = `<div class="text-center py-20 text-red-400">找不到此角色 ID (<b>${playerId}</b>) 的資料。<br>請確認 Firebase 的 "players" 集合中是否有建立這個 ID 的文件。</div>`;
                     return;
                 }
 
@@ -102,7 +103,8 @@
                     </div>
                 `;
             }, (error) => {
-                console.err("監聽失敗：", error);
+                // 【已修正】console.err 改為 console.error
+                console.error("監聽失敗：", error);
                 container.innerHTML = `<div class="text-center py-20 text-red-400">Firebase 連線或權限錯誤：${error.message}</div>`;
             });
 
