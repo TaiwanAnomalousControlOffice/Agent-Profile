@@ -20,17 +20,19 @@
 
     <!-- Firebase Firestore 邏輯 -->
     <script type="module">
-import { db } from './firebase-config.js';
-import { collection, onSnapshot, doc, updateDoc, setDoc, getDoc } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+        import { db } from './firebase-config.js';
+        import { doc, onSnapshot, updateDoc, getDoc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
         const container = document.getElementById('playerContainer');
 
-        // 從網址列取得 ID (例如: player.html?id=player01)
+        // 從網址列取得 ID (例如: index.html?id=player01)
         const urlParams = new URLSearchParams(window.location.search);
-        const playerId = urlParams.get('id') || 'player01'; 
+        const playerId = urlParams.get('id') || 'player01';  
 
-        // 即時監聽該單一角色的資料
+        // 確保 doc() 參數正確：(db, "集合名稱", "文件ID")
         const docRef = doc(db, "players", playerId);
+        
+        // 即時監聽該單一角色的資料
         onSnapshot(docRef, (docSnap) => {
             if (!docSnap.exists()) {
                 container.innerHTML = `<div class="text-center py-20 text-red-400">找不到此角色 ID (${playerId}) 的資料，請確認網址參數是否正確。</div>`;
@@ -131,7 +133,7 @@ import { collection, onSnapshot, doc, updateDoc, setDoc, getDoc } from "https://
                         </div>
                     </div>
 
-                    <!-- 技能與裝備資訊 (改為 textarea 支援長文字與換行) -->
+                    <!-- 技能與裝備資訊 -->
                     <div class="space-y-4 text-xs text-slate-300 bg-slate-950/50 p-4 rounded-xl border border-slate-800">
                         <!-- 技能區 -->
                         <div class="space-y-2 border-b border-slate-800 pb-3">
