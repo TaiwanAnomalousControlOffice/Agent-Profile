@@ -37,7 +37,7 @@
     <h1>⚔️ TRPG 戰鬥動態排序與 Boss 面板</h1>
     <p style="color: #94a3b8;">勾選參戰玩家，系統將自動依據人數計算 Boss 血量加成，並統一按速度排序。</p>
 
-    <!-- 戰鬥序列列表 (已移至最上方) -->
+    <!-- 戰鬥序列列表 -->
     <h2 style="margin-top: 30px;">📊 回合行動序列 (速度排序)</h2>
     <div id="battle-list">載入中...</div>
 
@@ -211,7 +211,6 @@
                     </div>
                 `;
 
-                // 右側：動態戰鬥操控面板 (傷害增減、數值修改、物品/技能)
                 html += `<div class="control-panel">`;
                 
                 if (!isMonster) {
@@ -244,14 +243,12 @@
                     html += `<button class="btn-danger btn-sm" onclick="window.deleteMonsterItem('${item.id}')">移除${isBoss ? ' BOSS' : '魔物'}</button>`;
                 }
 
-                html += `</div>`; // End control-panel
-
+                html += `</div>`;
                 card.innerHTML = html;
                 battleList.appendChild(card);
             });
         }
 
-        // 快速調整數值（扣血、補血、修為增減等）
         window.adjustStat = async (id, collectionType, fieldName, action, inputId) => {
             const inputVal = Number(document.getElementById(inputId).value);
             if (!inputVal || inputVal <= 0) {
@@ -279,14 +276,13 @@
                 await updateDoc(doc(db, targetCol, id), {
                     [fieldName]: finalVal
                 });
-                document.getElementById(inputId).value = ""; // 清空輸入框
+                document.getElementById(inputId).value = "";
             } catch (e) {
                 console.error(e);
                 alert("數值更新失敗！");
             }
         };
 
-        // 新增一般魔物
         document.getElementById("add-monster-btn").addEventListener("click", async () => {
             const name = document.getElementById("m-name").value.trim();
             if (!name) { alert("請輸入魔物名稱！"); return; }
@@ -316,7 +312,6 @@
             } catch (e) { console.error(e); alert("新增失敗"); }
         });
 
-        // 創造 BOSS (依參戰人數計算血量)
         document.getElementById("add-boss-btn").addEventListener("click", async () => {
             const name = document.getElementById("b-name").value.trim();
             if (!name) { alert("請輸入 BOSS 名稱！"); return; }
@@ -353,7 +348,6 @@
             } catch (e) { console.error(e); alert("生成 BOSS 失敗"); }
         });
 
-        // 刪除魔物或 BOSS
         window.deleteMonsterItem = async (id) => {
             if (!confirm("確定要將其從戰鬥中移除嗎？")) return;
             try {
