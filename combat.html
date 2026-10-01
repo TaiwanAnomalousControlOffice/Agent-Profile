@@ -8,7 +8,7 @@
         body { font-family: sans-serif; background: #090d16; color: #f1f5f9; padding: 20px; max-width: 1000px; margin: auto; }
         h1, h2 { color: #38bdf8; }
         .panel { background: #1e293b; padding: 20px; border-radius: 8px; margin-bottom: 25px; border: 1px solid #334155; }
-        .combat-card { background: #1e293b; padding: 15px; border-radius: 8px; margin-bottom: 12px; border: 1px solid #475569; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 15px; }
+        .combat-card { background: #1e293b; padding: 15px; border-radius: 8px; margin-bottom: 12px; border: 1px solid #475569; display: flex; justify-content: space-between; align-items: flex-start; flex-wrap: wrap; gap: 15px; }
         .combat-card.monster { border-left: 5px solid #f43f5e; background: #221821; }
         .combat-card.boss { border-left: 5px solid #a855f7; background: #2a1b3d; }
         .combat-card.player { border-left: 5px solid #38bdf8; }
@@ -23,9 +23,13 @@
         .btn-danger:hover { background: #e11d48; }
         .btn-boss { background: #a855f7; color: #fff; }
         .btn-boss:hover { background: #9333ea; }
+        .btn-sm { padding: 4px 8px; font-size: 0.75rem; font-weight: bold; }
         .form-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-bottom: 10px; }
         .checkbox-group { display: flex; flex-wrap: wrap; gap: 12px; margin-top: 8px; background: #0f172a; padding: 10px; border-radius: 6px; }
         .checkbox-label { display: flex; align-items: center; gap: 6px; cursor: pointer; color: #cbd5e1; font-size: 0.9rem; }
+        .control-panel { background: #0f172a; padding: 10px; border-radius: 6px; flex: 1; min-width: 260px; font-size: 0.85rem; }
+        .inline-inputs { display: flex; gap: 4px; margin-top: 4px; }
+        .inline-inputs input { margin-top: 0; text-align: center; }
     </style>
 </head>
 <body>
@@ -33,8 +37,12 @@
     <h1>⚔️ TRPG 戰鬥動態排序與 Boss 面板</h1>
     <p style="color: #94a3b8;">勾選參戰玩家，系統將自動依據人數計算 Boss 血量加成，並統一按速度排序。</p>
 
+    <!-- 戰鬥序列列表 (已移至最上方) -->
+    <h2 style="margin-top: 30px;">📊 回合行動序列 (速度排序)</h2>
+    <div id="battle-list">載入中...</div>
+
     <!-- 玩家參戰勾選面板 -->
-    <div class="panel">
+    <div class="panel" style="margin-top: 25px;">
         <h2>🛡️ 選擇本次參戰玩家</h2>
         <div id="player-checkboxes" class="checkbox-group">載入玩家清單中...</div>
     </div>
@@ -75,19 +83,15 @@
         <button class="btn-boss" id="add-boss-btn" style="margin-top: 10px;">👑 生成 BOSS (自動計算血量加成)</button>
     </div>
 
-    <!-- 戰鬥序列列表 -->
-    <h2>📊 回合行動序列 (速度排序)</h2>
-    <div id="battle-list">載入中...</div>
-
     <script type="module">
-        import { db, collection, onSnapshot, addDoc, deleteDoc, doc } from "./firebase-config.js";
+        import { db, collection, onSnapshot, addDoc, deleteDoc, doc, updateDoc } from "./firebase-config.js";
 
         const battleList = document.getElementById("battle-list");
         const checkboxContainer = document.getElementById("player-checkboxes");
         
         let allPlayersData = [];
         let monstersData = [];
-        let selectedPlayerIds = new Set(); // 記錄被勾選參戰的玩家 ID
+        let selectedPlayerIds = new Set(); 
 
         // 監聽 players 集合
         onSnapshot(collection(db, "players"), (snapshot) => {
@@ -96,7 +100,6 @@
                 allPlayersData.push({ id: docSnap.id, type: 'player', ...docSnap.data() });
             });
             
-            // 預設全部勾選
             if (selectedPlayerIds.size === 0 && allPlayersData.length > 0) {
                 allPlayersData.forEach(p => selectedPlayerIds.add(p.id));
             }
@@ -139,7 +142,6 @@
                 checkboxContainer.appendChild(label);
             });
 
-            // 綁定勾選事件
             document.querySelectorAll('.player-chk').forEach(chk => {
                 chk.addEventListener('change', (e) => {
                     const id = e.target.getAttribute('data-id');
@@ -209,27 +211,82 @@
                     </div>
                 `;
 
-                html += `<div style="flex: 1; min-width: 220px; background: #0f172a; padding: 10px; border-radius: 6px;">`;
+                // 右側：動態戰鬥操控面板 (傷害增減、數值修改、物品/技能)
+                html += `<div class="control-panel">`;
+                
                 if (!isMonster) {
-                    html += `<span style="font-size: 0.8rem; color: #38bdf8; font-weight: bold;">常用物品:</span><div style="font-size: 0.85rem; margin-top: 4px; color: #cbd5e1;">`;
-                    html += `繃帶: ${item["繃帶"] || 0} | 藥劑: ${item["修為恢復藥劑"] || 0} | 解錠: ${item["異常解錠"] || 0}<br>解咒: ${item["解咒符"] || 0} | 封魔: ${item["封魔匣"] || 0}`;
-                    html += `</div>`;
+                    html += `<div style="color: #38bdf8; font-weight: bold; margin-bottom: 4px;">🛡️ 玩家狀態與數值操控</div>`;
+                    html += `<div class="inline-inputs">
+                                <input type="number" id="val-hp-${item.id}" placeholder="扣血/補血數值" style="flex:2;">
+                                <button class="btn-sm btn-danger" onclick="window.adjustStat('${item.id}', 'player', '生命值', 'sub', 'val-hp-${item.id}')">扣血</button>
+                                <button class="btn-sm" onclick="window.adjustStat('${item.id}', 'player', '生命值', 'add', 'val-hp-${item.id}')">治療</button>
+                             </div>`;
+                    html += `<div class="inline-inputs" style="margin-top:6px;">
+                                <input type="number" id="val-mp-${item.id}" placeholder="修為增減" style="flex:2;">
+                                <button class="btn-sm btn-danger" onclick="window.adjustStat('${item.id}', 'player', '修為', 'sub', 'val-mp-${item.id}')">消耗</button>
+                                <button class="btn-sm" onclick="window.adjustStat('${item.id}', 'player', '修為', 'add', 'val-mp-${item.id}')">恢復</button>
+                             </div>`;
+                    html += `<div style="font-size: 0.8rem; margin-top: 6px; color: #cbd5e1;">
+                                繃帶: ${item["繃帶"] || 0} | 藥劑: ${item["修為恢復藥劑"] || 0} | 解錠: ${item["異常解錠"] || 0}<br>解咒: ${item["解咒符"] || 0} | 封魔: ${item["封魔匣"] || 0}
+                             </div>`;
                 } else {
-                    html += `<span style="font-size: 0.8rem; color: ${isBoss ? '#c084fc' : '#f43f5e'}; font-weight: bold;">${isBoss ? '👑 BOSS 技能:' : '戰鬥技能:'}</span><ul style="margin: 4px 0 0 0; padding-left: 18px; font-size: 0.85rem; color: #cbd5e1;">`;
-                    html += `<li>${item["技能1"] || '無'}</li>`;
-                    html += `<li>${item["技能2"] || '無'}</li>`;
-                    html += `<li>${item["技能3"] || '無'}</li>`;
-                    html += `</ul>`;
-                    html += `<button class="btn-danger" style="padding: 4px 8px; font-size: 0.75rem; margin-top: 6px;" onclick="window.deleteMonsterItem('${item.id}')">移除${isBoss ? ' BOSS' : '魔物'}</button>`;
+                    html += `<div style="color: ${isBoss ? '#c084fc' : '#f43f5e'}; font-weight: bold; margin-bottom: 4px;">${isBoss ? '👑 BOSS 操控面板' : '👹 魔物操控面板'}</div>`;
+                    html += `<div class="inline-inputs">
+                                <input type="number" id="val-hp-${item.id}" placeholder="傷害/治療值" style="flex:2;">
+                                <button class="btn-sm btn-danger" onclick="window.adjustStat('${item.id}', 'monster', '生命值', 'sub', 'val-hp-${item.id}')">造成傷害</button>
+                                <button class="btn-sm" onclick="window.adjustStat('${item.id}', 'monster', '生命值', 'add', 'val-hp-${item.id}')">回血</button>
+                             </div>`;
+                    html += `<ul style="margin: 6px 0; padding-left: 16px; font-size: 0.8rem; color: #cbd5e1;">
+                                <li>${item["技能1"] || '無'}</li>
+                                <li>${item["技能2"] || '無'}</li>
+                                <li>${item["技能3"] || '無'}</li>
+                             </ul>`;
+                    html += `<button class="btn-danger btn-sm" onclick="window.deleteMonsterItem('${item.id}')">移除${isBoss ? ' BOSS' : '魔物'}</button>`;
                 }
-                html += `</div>`;
+
+                html += `</div>`; // End control-panel
 
                 card.innerHTML = html;
                 battleList.appendChild(card);
             });
         }
 
-        // 新種一般魔物
+        // 快速調整數值（扣血、補血、修為增減等）
+        window.adjustStat = async (id, collectionType, fieldName, action, inputId) => {
+            const inputVal = Number(document.getElementById(inputId).value);
+            if (!inputVal || inputVal <= 0) {
+                alert("請輸入有效的數值！");
+                return;
+            }
+
+            const targetCol = collectionType === 'player' ? "players" : "monsters";
+            const currentList = collectionType === 'player' ? allPlayersData : monstersData;
+            const targetItem = currentList.find(i => i.id === id);
+            
+            if (!targetItem) return;
+
+            let currentVal = Number(targetItem[fieldName] || 0);
+            let maxVal = fieldName === '生命值' ? Number(targetItem['生命初始值'] || currentVal) : 
+                         fieldName === '修為' ? Number(targetItem['修為初始值'] || currentVal) : 999999;
+
+            let finalVal = action === 'add' ? currentVal + inputVal : currentVal - inputVal;
+            if (fieldName === '生命值' || fieldName === '修為') {
+                if (finalVal < 0) finalVal = 0;
+                if (finalVal > maxVal) finalVal = maxVal;
+            }
+
+            try {
+                await updateDoc(doc(db, targetCol, id), {
+                    [fieldName]: finalVal
+                });
+                document.getElementById(inputId).value = ""; // 清空輸入框
+            } catch (e) {
+                console.error(e);
+                alert("數值更新失敗！");
+            }
+        };
+
+        // 新增一般魔物
         document.getElementById("add-monster-btn").addEventListener("click", async () => {
             const name = document.getElementById("m-name").value.trim();
             if (!name) { alert("請輸入魔物名稱！"); return; }
