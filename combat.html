@@ -308,7 +308,7 @@
 
                 const name = item.代號 || item.姓名 || '未命名';
                 const element = item.屬性 ? `屬性: ${item.屬性}` : '';
-                let tag = `🛡 玩家 (${item.id})`;
+                let tag = `🛡 玩家 (${item.姓名})`;
                 if (isBoss) tag = `👑 BOSS [${element}]`;
                 else if (isMonster) tag = `👹 魔物 [${element}]`;
 
