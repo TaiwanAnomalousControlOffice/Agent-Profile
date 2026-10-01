@@ -28,13 +28,27 @@
 
     <!-- Firebase Firestore 邏輯 -->
     <script type="module">
-import { db } from './firebase-config.js';
-import { collection, onSnapshot, doc, updateDoc, setDoc, getDoc } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+        import { db } from './firebase-config.js';
+        import { collection, onSnapshot, doc, updateDoc, setDoc, getDoc } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 
         const container = document.getElementById('playersContainer');
         const filterContainer = document.getElementById('filterCheckboxes');
 
         let activePlayersFilter = JSON.parse(localStorage.getItem('trpg_active_filter')) || null;
+        let debounceTimers = {};
+
+        // 防抖動更新函式，避免頻繁寫入 Firebase 與畫面閃爍
+        window.debouncedUpdateField = function(playerId, field, val) {
+            const key = `${playerId}_${field}`;
+            if (debounceTimers[key]) clearTimeout(debounceTimers[key]);
+            debounceTimers[key] = setTimeout(async () => {
+                try {
+                    await updateDoc(doc(db, "players", playerId), { [field]: val });
+                } catch (err) {
+                    console.error("更新欄位失敗:", err);
+                }
+            }, 400);
+        };
 
         try {
             onSnapshot(collection(db, "players"), (snapshot) => {
@@ -102,11 +116,11 @@ import { collection, onSnapshot, doc, updateDoc, setDoc, getDoc } from "https://
                             </div>
                             <!-- 長短休與資產 -->
                             <div class="flex flex-wrap items-center gap-2">
-                                <button onclick="window.shortRest('${id}')" class="bg-blue-600 hover:bg-blue-500 text-xs px-2.5 py-1.5 rounded-lg font-bold cursor-pointer">短休</button>
-                                <button onclick="window.longRest('${id}')" class="bg-indigo-600 hover:bg-indigo-500 text-xs px-2.5 py-1.5 rounded-lg font-bold cursor-pointer">長休</button>
+                                <button onclick="window.shortRest('${id}')" class="bg-blue-600 hover:bg-blue-500 text-xs px-2.5 py-1.5 rounded-lg font-bold cursor-pointer transition">短休</button>
+                                <button onclick="window.longRest('${id}')" class="bg-indigo-600 hover:bg-indigo-500 text-xs px-2.5 py-1.5 rounded-lg font-bold cursor-pointer transition">長休</button>
                                 <div class="flex items-center gap-1 bg-slate-800 px-2 py-1 rounded-lg border border-slate-700">
                                     <span class="text-[11px] text-slate-400">資產:</span>
-                                    <input type="number" value="${p.資產 ?? 0}" onchange="window.updateField('${id}', '資產', parseInt(this.value) || 0)" class="bg-slate-900 border border-slate-700 px-1.5 py-0.5 rounded w-20 text-yellow-400 font-bold text-xs">
+                                    <input type="number" value="${p.資產 ?? 0}" oninput="window.debouncedUpdateField('${id}', '資產', parseInt(this.value) || 0)" class="bg-slate-900 border border-slate-700 px-1.5 py-0.5 rounded w-20 text-yellow-400 font-bold text-xs">
                                     <span class="text-[11px] text-slate-400">元</span>
                                 </div>
                             </div>
@@ -118,10 +132,10 @@ import { collection, onSnapshot, doc, updateDoc, setDoc, getDoc } from "https://
                             <div class="bg-slate-800/60 p-2.5 rounded-lg border border-slate-700/60 space-y-1.5">
                                 <div class="flex justify-between items-center text-[11px]">
                                     <span class="font-bold text-slate-300">生命值</span>
-                                    <span class="text-slate-400">上限: <input type="number" value="${p.生命初始值 ?? 100}" onchange="window.updateField('${id}', '生命初始值', parseInt(this.value) || 0)" class="w-10 bg-slate-900 text-center rounded border border-slate-700 text-[11px] text-amber-300"></span>
+                                    <span class="text-slate-400">上限: <input type="number" value="${p.生命初始值 ?? 100}" oninput="window.debouncedUpdateField('${id}', '生命初始值', parseInt(this.value) || 0)" class="w-10 bg-slate-900 text-center rounded border border-slate-700 text-[11px] text-amber-300"></span>
                                 </div>
                                 <div class="text-center">
-                                    <input type="number" value="${p.生命值 ?? 0}" onchange="window.updateField('${id}', '生命值', parseInt(this.value) || 0)" class="w-full bg-slate-900 border border-slate-700 rounded text-center text-xl font-bold text-red-400 py-0.5">
+                                    <input type="number" value="${p.生命值 ?? 0}" oninput="window.debouncedUpdateField('${id}', '生命值', parseInt(this.value) || 0)" class="w-full bg-slate-900 border border-slate-700 rounded text-center text-xl font-bold text-red-400 py-0.5">
                                 </div>
                                 <div class="flex justify-center gap-1">
                                     <button onclick="window.adjustValue('${id}', '生命值', -5, ${p.生命值 ?? 0})" class="bg-slate-700 hover:bg-slate-600 px-1 py-0.5 rounded text-[10px]">-5</button>
@@ -135,10 +149,10 @@ import { collection, onSnapshot, doc, updateDoc, setDoc, getDoc } from "https://
                             <div class="bg-slate-800/60 p-2.5 rounded-lg border border-slate-700/60 space-y-1.5">
                                 <div class="flex justify-between items-center text-[11px]">
                                     <span class="font-bold text-slate-300">修為</span>
-                                    <span class="text-slate-400">上限: <input type="number" value="${p.修為初始值 ?? 50}" onchange="window.updateField('${id}', '修為初始值', parseInt(this.value) || 0)" class="w-10 bg-slate-900 text-center rounded border border-slate-700 text-[11px] text-amber-300"></span>
+                                    <span class="text-slate-400">上限: <input type="number" value="${p.修為初始值 ?? 50}" oninput="window.debouncedUpdateField('${id}', '修為初始值', parseInt(this.value) || 0)" class="w-10 bg-slate-900 text-center rounded border border-slate-700 text-[11px] text-amber-300"></span>
                                 </div>
                                 <div class="text-center">
-                                    <input type="number" value="${p.修為 ?? 0}" onchange="window.updateField('${id}', '修為', parseInt(this.value) || 0)" class="w-full bg-slate-900 border border-slate-700 rounded text-center text-xl font-bold text-cyan-400 py-0.5">
+                                    <input type="number" value="${p.修為 ?? 0}" oninput="window.debouncedUpdateField('${id}', '修為', parseInt(this.value) || 0)" class="w-full bg-slate-900 border border-slate-700 rounded text-center text-xl font-bold text-cyan-400 py-0.5">
                                 </div>
                                 <div class="flex justify-center gap-1">
                                     <button onclick="window.adjustValue('${id}', '修為', -5, ${p.修為 ?? 0})" class="bg-slate-700 hover:bg-slate-600 px-1 py-0.5 rounded text-[10px]">-5</button>
@@ -152,10 +166,10 @@ import { collection, onSnapshot, doc, updateDoc, setDoc, getDoc } from "https://
                             <div class="bg-slate-800/60 p-2.5 rounded-lg border border-slate-700/60 space-y-1.5">
                                 <div class="flex justify-between items-center text-[11px]">
                                     <span class="font-bold text-slate-300">速度</span>
-                                    <span class="text-slate-400">初始: <input type="number" value="${p.速度初始值 ?? 10}" onchange="window.updateField('${id}', '速度初始值', parseInt(this.value) || 0)" class="w-10 bg-slate-900 text-center rounded border border-slate-700 text-[11px] text-amber-300"></span>
+                                    <span class="text-slate-400">初始: <input type="number" value="${p.速度初始值 ?? 10}" oninput="window.debouncedUpdateField('${id}', '速度初始值', parseInt(this.value) || 0)" class="w-10 bg-slate-900 text-center rounded border border-slate-700 text-[11px] text-amber-300"></span>
                                 </div>
                                 <div class="text-center">
-                                    <input type="number" value="${p.速度 ?? 0}" onchange="window.updateField('${id}', '速度', parseInt(this.value) || 0)" class="w-full bg-slate-900 border border-slate-700 rounded text-center text-xl font-bold text-emerald-400 py-0.5">
+                                    <input type="number" value="${p.速度 ?? 0}" oninput="window.debouncedUpdateField('${id}', '速度', parseInt(this.value) || 0)" class="w-full bg-slate-900 border border-slate-700 rounded text-center text-xl font-bold text-emerald-400 py-0.5">
                                 </div>
                                 <div class="flex justify-center gap-1">
                                     <button onclick="window.adjustValue('${id}', '速度', -5, ${p.速度 ?? 0})" class="bg-slate-700 hover:bg-slate-600 px-1 py-0.5 rounded text-[10px]">-5</button>
@@ -169,10 +183,10 @@ import { collection, onSnapshot, doc, updateDoc, setDoc, getDoc } from "https://
                             <div class="bg-slate-800/60 p-2.5 rounded-lg border border-slate-700/60 space-y-1.5">
                                 <div class="flex justify-between items-center text-[11px]">
                                     <span class="font-bold text-slate-300">攻擊</span>
-                                    <span class="text-slate-400">初始: <input type="number" value="${p.攻擊初始值 ?? 10}" onchange="window.updateField('${id}', '攻擊初始值', parseInt(this.value) || 0)" class="w-10 bg-slate-900 text-center rounded border border-slate-700 text-[11px] text-amber-300"></span>
+                                    <span class="text-slate-400">初始: <input type="number" value="${p.攻擊初始值 ?? 10}" oninput="window.debouncedUpdateField('${id}', '攻擊初始值', parseInt(this.value) || 0)" class="w-10 bg-slate-900 text-center rounded border border-slate-700 text-[11px] text-amber-300"></span>
                                 </div>
                                 <div class="text-center">
-                                    <input type="number" value="${p.攻擊 ?? 0}" onchange="window.updateField('${id}', '攻擊', parseInt(this.value) || 0)" class="w-full bg-slate-900 border border-slate-700 rounded text-center text-xl font-bold text-orange-400 py-0.5">
+                                    <input type="number" value="${p.攻擊 ?? 0}" oninput="window.debouncedUpdateField('${id}', '攻擊', parseInt(this.value) || 0)" class="w-full bg-slate-900 border border-slate-700 rounded text-center text-xl font-bold text-orange-400 py-0.5">
                                 </div>
                                 <div class="flex justify-center gap-1">
                                     <button onclick="window.adjustValue('${id}', '攻擊', -1, ${p.攻擊 ?? 0})" class="bg-slate-700 hover:bg-slate-600 px-2 py-0.5 rounded text-[10px]">-1</button>
@@ -184,10 +198,10 @@ import { collection, onSnapshot, doc, updateDoc, setDoc, getDoc } from "https://
                             <div class="bg-slate-800/60 p-2.5 rounded-lg border border-slate-700/60 space-y-1.5">
                                 <div class="flex justify-between items-center text-[11px]">
                                     <span class="font-bold text-slate-300">防禦</span>
-                                    <span class="text-slate-400">初始: <input type="number" value="${p.防禦初始值 ?? 10}" onchange="window.updateField('${id}', '防禦初始值', parseInt(this.value) || 0)" class="w-10 bg-slate-900 text-center rounded border border-slate-700 text-[11px] text-amber-300"></span>
+                                    <span class="text-slate-400">初始: <input type="number" value="${p.防禦初始值 ?? 10}" oninput="window.debouncedUpdateField('${id}', '防禦初始值', parseInt(this.value) || 0)" class="w-10 bg-slate-900 text-center rounded border border-slate-700 text-[11px] text-amber-300"></span>
                                 </div>
                                 <div class="text-center">
-                                    <input type="number" value="${p.防禦 ?? 0}" onchange="window.updateField('${id}', '防禦', parseInt(this.value) || 0)" class="w-full bg-slate-900 border border-slate-700 rounded text-center text-xl font-bold text-blue-400 py-0.5">
+                                    <input type="number" value="${p.防禦 ?? 0}" oninput="window.debouncedUpdateField('${id}', '防禦', parseInt(this.value) || 0)" class="w-full bg-slate-900 border border-slate-700 rounded text-center text-xl font-bold text-blue-400 py-0.5">
                                 </div>
                                 <div class="flex justify-center gap-1">
                                     <button onclick="window.adjustValue('${id}', '防禦', -1, ${p.防禦 ?? 0})" class="bg-slate-700 hover:bg-slate-600 px-2 py-0.5 rounded text-[10px]">-1</button>
@@ -205,7 +219,7 @@ import { collection, onSnapshot, doc, updateDoc, setDoc, getDoc } from "https://
                             ${renderItemControl(id, '封魔匣', p.封魔匣)}
                         </div>
 
-                        <!-- 4. 技能配置與裝備欄位 (改為上下獨立區塊，裝備改用 textarea 支援長文字與換行) -->
+                        <!-- 4. 技能配置與裝備欄位 -->
                         <div class="space-y-3 text-xs text-slate-300 bg-slate-950/60 p-3 rounded-xl border border-slate-800">
                             <!-- 技能配置區 -->
                             <div class="space-y-1.5 border-b border-slate-800 pb-3">
@@ -225,7 +239,7 @@ import { collection, onSnapshot, doc, updateDoc, setDoc, getDoc } from "https://
                                 </div>
                             </div>
 
-                            <!-- 裝備欄位區 (改為獨立寬螢幕顯示，使用 textarea 完整顯示長說明) -->
+                            <!-- 裝備欄位區 -->
                             <div class="space-y-2">
                                 <div class="font-bold text-amber-400 text-sm">裝備欄位 (可直接修改)</div>
                                 <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
@@ -277,7 +291,7 @@ import { collection, onSnapshot, doc, updateDoc, setDoc, getDoc } from "https://
             return `
                 <div class="bg-slate-800/40 p-2 rounded-lg border border-slate-700/50 flex flex-col items-center justify-between space-y-1">
                     <span class="text-[11px] font-bold text-slate-300 text-center">${name}</span>
-                    <input type="number" value="${count}" onchange="window.updateField('${id}', '${name}', parseInt(this.value) || 0)" class="w-full bg-slate-900 border border-slate-700 rounded text-center font-bold text-amber-300 text-sm py-0.5">
+                    <input type="number" value="${count}" oninput="window.debouncedUpdateField('${id}', '${name}', parseInt(this.value) || 0)" class="w-full bg-slate-900 border border-slate-700 rounded text-center font-bold text-amber-300 text-sm py-0.5">
                     <div class="flex gap-1">
                         <button onclick="window.adjustValue('${id}', '${name}', -1, ${count})" class="bg-slate-700 hover:bg-slate-600 px-1.5 py-0.5 rounded text-[10px]">-1</button>
                         <button onclick="window.adjustValue('${id}', '${name}', 1, ${count})" class="bg-slate-700 hover:bg-slate-600 px-1.5 py-0.5 rounded text-[10px]">+1</button>
@@ -286,13 +300,12 @@ import { collection, onSnapshot, doc, updateDoc, setDoc, getDoc } from "https://
             `;
         }
 
-        // 裝備欄位改用 textarea 支援長文字與換行
         function renderEquipTextarea(id, slotName, val) {
             const dbField = `裝備_${slotName}`;
             return `
                 <div class="flex flex-col gap-0.5 bg-slate-900 p-2 rounded border border-slate-800">
                     <label class="text-[11px] font-bold text-amber-400/80">${slotName}</label>
-                    <textarea rows="2" onchange="window.updateField('${id}', '${dbField}', this.value)" class="bg-slate-800 border border-slate-700 p-1.5 rounded text-white text-xs resize-y focus:outline-none focus:border-amber-500" placeholder="未裝備">${val || ''}</textarea>
+                    <textarea rows="2" oninput="window.debouncedUpdateField('${id}', '${dbField}', this.value)" class="bg-slate-800 border border-slate-700 p-1.5 rounded text-white text-xs resize-y focus:outline-none focus:border-amber-500" placeholder="未裝備">${val || ''}</textarea>
                 </div>
             `;
         }
@@ -301,7 +314,7 @@ import { collection, onSnapshot, doc, updateDoc, setDoc, getDoc } from "https://
             if (!skills || skills.length === 0) return '<div class="text-xs text-slate-500">目前無額外技能</div>';
             return skills.map((sk, idx) => `
                 <div class="flex items-center gap-1.5 bg-slate-900 p-1.5 rounded border border-slate-800">
-                    <textarea rows="2" onchange="window.updateExtraSkill('${id}', ${idx}, this.value)" class="bg-slate-800 border border-slate-700 p-1.5 rounded flex-1 text-white text-xs resize-y focus:outline-none focus:border-amber-500" placeholder="技能說明">${sk || ''}</textarea>
+                    <textarea rows="2" oninput="window.updateExtraSkillDebounced('${id}', ${idx}, this.value)" class="bg-slate-800 border border-slate-700 p-1.5 rounded flex-1 text-white text-xs resize-y focus:outline-none focus:border-amber-500" placeholder="技能說明">${sk || ''}</textarea>
                     <button onclick="window.removeExtraSkill('${id}', ${idx})" class="bg-red-900/60 hover:bg-red-800 text-red-300 px-2 py-1 rounded text-xs font-bold cursor-pointer">✕</button>
                 </div>
             `).join('');
@@ -311,8 +324,8 @@ import { collection, onSnapshot, doc, updateDoc, setDoc, getDoc } from "https://
             if (!items || items.length === 0) return '<div class="text-xs text-slate-500 text-center py-0.5">目前無其他道具</div>';
             return items.map((item, idx) => `
                 <div class="flex items-center gap-2 bg-slate-900 p-1.5 rounded border border-slate-800 text-xs">
-                    <input type="text" value="${item.name || ''}" onchange="window.updateOtherItemName('${id}', ${idx}, this.value)" class="bg-slate-800 border border-slate-700 px-2 py-1 rounded flex-1 text-slate-200" placeholder="道具名稱">
-                    <input type="number" value="${item.qty || 1}" onchange="window.updateOtherItemQty('${id}', ${idx}, parseInt(this.value) || 1)" class="bg-slate-800 border border-slate-700 px-2 py-1 rounded w-14 text-center text-slate-200">
+                    <input type="text" value="${item.name || ''}" oninput="window.updateOtherItemNameDebounced('${id}', ${idx}, this.value)" class="bg-slate-800 border border-slate-700 px-2 py-1 rounded flex-1 text-slate-200" placeholder="道具名稱">
+                    <input type="number" value="${item.qty || 1}" oninput="window.updateOtherItemQtyDebounced('${id}', ${idx}, parseInt(this.value) || 1)" class="bg-slate-800 border border-slate-700 px-2 py-1 rounded w-14 text-center text-slate-200">
                     <button onclick="window.removeOtherItem('${id}', ${idx})" class="text-red-400 hover:text-red-300 px-1.5 py-1 font-bold">✕</button>
                 </div>
             `).join('');
@@ -321,10 +334,6 @@ import { collection, onSnapshot, doc, updateDoc, setDoc, getDoc } from "https://
         window.adjustValue = async function(playerId, field, delta, currentVal) {
             const newVal = Math.max(0, (currentVal ?? 0) + delta);
             await updateDoc(doc(db, "players", playerId), { [field]: newVal });
-        };
-
-        window.updateField = async function(playerId, field, val) {
-            await updateDoc(doc(db, "players", playerId), { [field]: val });
         };
 
         window.shortRest = async function(playerId) {
@@ -368,14 +377,19 @@ import { collection, onSnapshot, doc, updateDoc, setDoc, getDoc } from "https://
             }
         };
 
-        window.updateExtraSkill = async function(playerId, idx, val) {
-            const docRef = doc(db, "players", playerId);
-            const snap = await getDoc(docRef);
-            if (snap.exists()) {
-                let skills = [...(snap.data().額外技能 || [])];
-                skills[idx] = val;
-                await updateDoc(docRef, { 額外技能: skills });
-            }
+        let skillDebounceTimers = {};
+        window.updateExtraSkillDebounced = function(playerId, idx, val) {
+            const key = `${playerId}_skill_${idx}`;
+            if (skillDebounceTimers[key]) clearTimeout(skillDebounceTimers[key]);
+            skillDebounceTimers[key] = setTimeout(async () => {
+                const docRef = doc(db, "players", playerId);
+                const snap = await getDoc(docRef);
+                if (snap.exists()) {
+                    let skills = [...(snap.data().額外技能 || [])];
+                    skills[idx] = val;
+                    await updateDoc(docRef, { 額外技能: skills });
+                }
+            }, 400);
         };
 
         window.removeExtraSkill = async function(playerId, idx) {
@@ -397,24 +411,37 @@ import { collection, onSnapshot, doc, updateDoc, setDoc, getDoc } from "https://
             }
         };
 
-        window.updateOtherItemName = async function(playerId, idx, name) {
-            const docRef = doc(db, "players", playerId);
-            const snap = await getDoc(docRef);
-            if (snap.exists()) {
-                let items = [...(snap.data().其餘道具 || [])];
-                items[idx].name = name;
-                await updateDoc(docRef, { 其餘道具: items });
-            }
+        let itemDebounceTimers = {};
+        window.updateOtherItemNameDebounced = function(playerId, idx, name) {
+            const key = `${playerId}_item_name_${idx}`;
+            if (itemDebounceTimers[key]) clearTimeout(itemDebounceTimers[key]);
+            itemDebounceTimers[key] = setTimeout(async () => {
+                const docRef = doc(db, "players", playerId);
+                const snap = await getDoc(docRef);
+                if (snap.exists()) {
+                    let items = [...(snap.data().其餘道具 || [])];
+                    if (items[idx]) {
+                        items[idx].name = name;
+                        await updateDoc(docRef, { 其餘道具: items });
+                    }
+                }
+            }, 400);
         };
 
-        window.updateOtherItemQty = async function(playerId, idx, qty) {
-            const docRef = doc(db, "players", playerId);
-            const snap = await getDoc(docRef);
-            if (snap.exists()) {
-                let items = [...(snap.data().其餘道具 || [])];
-                items[idx].qty = qty;
-                await updateDoc(docRef, { 其餘道具: items });
-            }
+        window.updateOtherItemQtyDebounced = function(playerId, idx, qty) {
+            const key = `${playerId}_item_qty_${idx}`;
+            if (itemDebounceTimers[key]) clearTimeout(itemDebounceTimers[key]);
+            itemDebounceTimers[key] = setTimeout(async () => {
+                const docRef = doc(db, "players", playerId);
+                const snap = await getDoc(docRef);
+                if (snap.exists()) {
+                    let items = [...(snap.data().其餘道具 || [])];
+                    if (items[idx]) {
+                        items[idx].qty = qty;
+                        await updateDoc(docRef, { 其餘道具: items });
+                    }
+                }
+            }, 400);
         };
 
         window.removeOtherItem = async function(playerId, idx) {
