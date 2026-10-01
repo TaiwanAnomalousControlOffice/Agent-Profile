@@ -5,14 +5,14 @@ import { getFirestore } from "https://www.gstatic.com/firebasejs/10.7.1/firebase
 // TODO: Add SDKs for Firebase products that you want to use
 // https://firebase.google.com/docs/web/setup#available-libraries
 
-// 您的專案設定
+// Your web app's Firebase configuration
 const firebaseConfig = {
-  apiKey: "您的apiKey",
-  authDomain: "您的authDomain",
-  projectId: "您的projectId",
-  storageBucket: "您的storageBucket",
-  messagingSenderId: "您的messagingSenderId",
-  appId: "您的appId"
+  apiKey: "AIzaSyDqMyinfY5lU_xiGaYU4vuHZrw91wR7BKc",
+  authDomain: "trpg-nfc-system.firebaseapp.com",
+  projectId: "trpg-nfc-system",
+  storageBucket: "trpg-nfc-system.firebasestorage.app",
+  messagingSenderId: "695423542715",
+  appId: "1:695423542715:web:1acfcca9a908b7213b509e"
 };
 
 // 初始化 Firebase
