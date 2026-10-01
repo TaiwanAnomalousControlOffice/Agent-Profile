@@ -296,6 +296,20 @@
                 items.splice(idx, 1);
                 await updateDoc(docRef, { 其餘道具: items });
             }
+(error) => {
+                // 【已修正】console.err 改為 console.error
+                console.error("監聽失敗：", error);
+                container.innerHTML = `<div class="text-center py-20 text-red-400">Firebase 連線或權限錯誤：${error.message}</div>`;
+            });
+
+        } catch (err) {
+            console.error(err);
+            container.innerHTML = `<div class="text-center py-20 text-red-400">初始化發生錯誤：${err.message}</div>`;
+        }
+
+        window.adjustValue = async function(playerId, field, delta, currentVal) {
+            const newVal = Math.max(0, (currentVal ?? 0) + delta);
+            await updateDoc(doc(db, "players", playerId), { [field]: newVal });
         };
     </script>
 </body>
