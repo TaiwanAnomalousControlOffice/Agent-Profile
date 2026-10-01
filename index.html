@@ -7,301 +7,113 @@
 </head>
 <body class="bg-slate-950 text-slate-100 min-h-screen p-4 md:p-6">
     <div class="max-w-4xl mx-auto space-y-6">
-        <!-- 頂部標題 -->
         <div class="bg-slate-900 p-4 rounded-xl border border-slate-800 shadow-lg">
             <h1 class="text-2xl font-bold text-cyan-400">異常管制局探員檔案</h1>
         </div>
-
-        <!-- 玩家角色卡片容器 -->
         <div id="playerContainer" class="space-y-6">
-            <div class="text-center py-20 text-slate-500">正在讀取角色資料...</div>
+            <div class="text-center py-20 text-slate-500">正在連接資料庫並讀取角色資料...</div>
         </div>
     </div>
 
-    <!-- Firebase Firestore 邏輯 -->
     <script type="module">
         import { db } from './firebase-config.js';
         import { doc, onSnapshot, updateDoc, getDoc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
         const container = document.getElementById('playerContainer');
-
-        // 從網址列取得 ID (例如: index.html?id=player01)
         const urlParams = new URLSearchParams(window.location.search);
         const playerId = urlParams.get('id') || 'player01';  
 
-        // 確保 doc() 參數正確：(db, "集合名稱", "文件ID")
-        const docRef = doc(db, "players", playerId);
-        
-        // 即時監聽該單一角色的資料
-        onSnapshot(docRef, (docSnap) => {
-            if (!docSnap.exists()) {
-                container.innerHTML = `<div class="text-center py-20 text-red-400">找不到此角色 ID (${playerId}) 的資料，請確認網址參數是否正確。</div>`;
-                return;
-            }
-
-            const p = docSnap.data();
-            const avatarUrl = p.頭像 || p.avatar || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80';
+        try {
+            const docRef = doc(db, "players", playerId);
             
-            // 主要顯示代號，若無代號則顯示姓名
-            const primaryName = p.代號 || p.姓名 || '未命名';
-            const subName = p.代號 ? `(姓名: ${p.姓名 || '-'})` : '';
+            onSnapshot(docRef, (docSnap) => {
+                if (!docSnap.exists()) {
+                    container.innerHTML = `<div class="text-center py-20 text-red-400">找不到此角色 ID (<b>${playerId</b>}) 的資料。<br>請確認 Firebase 的 "players" 集合中是否有建立這個 ID 的文件。</div>`;
+                    return;
+                }
 
-            container.innerHTML = `
-                <div class="bg-slate-900 border border-slate-800 rounded-xl p-6 shadow-2xl space-y-6">
-                    <!-- 基本資料區 (放大頭像、主要顯示代號) -->
-                    <div class="flex flex-col md:flex-row items-center gap-6 border-b border-slate-800 pb-6 text-center md:text-left">
-                        <img src="${avatarUrl}" alt="頭像" onerror="this.src='https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80'" class="w-32 h-32 rounded-full object-cover border-4 border-cyan-400 shadow-xl">
-                        <div class="space-y-1.5 flex-1">
-                            <div class="text-3xl font-bold text-cyan-300">${primaryName} <span class="text-sm font-normal text-slate-400">${subName}</span></div>
-                            <div class="text-sm text-slate-300 flex flex-wrap justify-center md:justify-start gap-3 mt-2">
-                                <span class="bg-slate-800 px-2.5 py-1 rounded border border-slate-700">性別: ${p.性別 || '-'}</span>
-                                <span class="bg-slate-800 px-2.5 py-1 rounded border border-slate-700">年齡: ${p.年齡 || '-'}</span>
-                                <span class="bg-slate-800 px-2.5 py-1 rounded border border-slate-700">種族: ${p.種族 || '-'}</span>
-                                <span class="bg-slate-800 px-2.5 py-1 rounded border border-slate-700">職業: ${p.職業 || '-'}</span>
-                            </div>
-                        </div>
-                        <div class="bg-slate-800/80 px-4 py-2 rounded-xl border border-slate-700 text-center">
-                            <div class="text-xs text-slate-400">當前資產</div>
-                            <div class="text-xl font-bold text-yellow-400">${p.資產 ?? 0} 元</div>
-                        </div>
-                    </div>
+                const p = docSnap.data();
+                const avatarUrl = p.頭像 || p.avatar || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80';
+                const primaryName = p.代號 || p.姓名 || '未命名';
+                const subName = p.代號 ? `(姓名: ${p.姓名 || '-'})` : '';
 
-                    <!-- 核心屬性調整區 (玩家可增減) -->
-                    <div class="grid grid-cols-1 md:grid-cols-5 gap-4">
-                        <!-- 生命值 -->
-                        <div class="bg-slate-800/50 p-3 rounded-xl border border-slate-700/50 space-y-2 text-center">
-                            <div class="text-xs text-slate-400">生命值</div>
-                            <div class="text-2xl font-bold text-red-400">${p.生命值 ?? 0}</div>
-                            <div class="flex justify-center gap-1">
-                                <button onclick="window.adjustValue('${playerId}', '生命值', -5, ${p.生命值 ?? 0})" class="bg-slate-700 hover:bg-slate-600 px-1.5 py-0.5 rounded text-xs">-5</button>
-                                <button onclick="window.adjustValue('${playerId}', '生命值', -1, ${p.生命值 ?? 0})" class="bg-slate-700 hover:bg-slate-600 px-1.5 py-0.5 rounded text-xs">-1</button>
-                                <button onclick="window.adjustValue('${playerId}', '生命值', 1, ${p.生命值 ?? 0})" class="bg-slate-700 hover:bg-slate-600 px-1.5 py-0.5 rounded text-xs">+1</button>
-                                <button onclick="window.adjustValue('${playerId}', '生命值', 5, ${p.生命值 ?? 0})" class="bg-slate-700 hover:bg-slate-600 px-1.5 py-0.5 rounded text-xs">+5</button>
+                container.innerHTML = `
+                    <div class="bg-slate-900 border border-slate-800 rounded-xl p-6 shadow-2xl space-y-6">
+                        <div class="flex flex-col md:flex-row items-center gap-6 border-b border-slate-800 pb-6 text-center md:text-left">
+                            <img src="${avatarUrl}" alt="頭像" onerror="this.src='https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80'" class="w-32 h-32 rounded-full object-cover border-4 border-cyan-400 shadow-xl">
+                            <div class="space-y-1.5 flex-1">
+                                <div class="text-3xl font-bold text-cyan-300">${primaryName} <span class="text-sm font-normal text-slate-400">${subName}</span></div>
+                                <div class="text-sm text-slate-300 flex flex-wrap justify-center md:justify-start gap-3 mt-2">
+                                    <span class="bg-slate-800 px-2.5 py-1 rounded border border-slate-700">性別: ${p.性別 || '-'}</span>
+                                    <span class="bg-slate-800 px-2.5 py-1 rounded border border-slate-700">年齡: ${p.年齡 || '-'}</span>
+                                    <span class="bg-slate-800 px-2.5 py-1 rounded border border-slate-700">種族: ${p.種族 || '-'}</span>
+                                    <span class="bg-slate-800 px-2.5 py-1 rounded border border-slate-700">職業: ${p.職業 || '-'}</span>
+                                </div>
+                            </div>
+                            <div class="bg-slate-800/80 px-4 py-2 rounded-xl border border-slate-700 text-center">
+                                <div class="text-xs text-slate-400">當前資產</div>
+                                <div class="text-xl font-bold text-yellow-400">${p.資產 ?? 0} 元</div>
                             </div>
                         </div>
-                        <!-- 修為 -->
-                        <div class="bg-slate-800/50 p-3 rounded-xl border border-slate-700/50 space-y-2 text-center">
-                            <div class="text-xs text-slate-400">修為</div>
-                            <div class="text-2xl font-bold text-cyan-400">${p.修為 ?? 0}</div>
-                            <div class="flex justify-center gap-1">
-                                <button onclick="window.adjustValue('${playerId}', '修為', -5, ${p.修為 ?? 0})" class="bg-slate-700 hover:bg-slate-600 px-1.5 py-0.5 rounded text-xs">-5</button>
-                                <button onclick="window.adjustValue('${playerId}', '修為', -1, ${p.修為 ?? 0})" class="bg-slate-700 hover:bg-slate-600 px-1.5 py-0.5 rounded text-xs">-1</button>
-                                <button onclick="window.adjustValue('${playerId}', '修為', 1, ${p.修為 ?? 0})" class="bg-slate-700 hover:bg-slate-600 px-1.5 py-0.5 rounded text-xs">+1</button>
-                                <button onclick="window.adjustValue('${playerId}', '修為', 5, ${p.修為 ?? 0})" class="bg-slate-700 hover:bg-slate-600 px-1.5 py-0.5 rounded text-xs">+5</button>
+
+                        <!-- 屬性區 -->
+                        <div class="grid grid-cols-1 md:grid-cols-5 gap-4">
+                            <div class="bg-slate-800/50 p-3 rounded-xl border border-slate-700/50 space-y-2 text-center">
+                                <div class="text-xs text-slate-400">生命值</div>
+                                <div class="text-2xl font-bold text-red-400">${p.生命值 ?? 0}</div>
+                                <div class="flex justify-center gap-1">
+                                    <button onclick="window.adjustValue('${playerId}', '生命值', -1, ${p.生命值 ?? 0})" class="bg-slate-700 hover:bg-slate-600 px-2 py-0.5 rounded text-xs">-1</button>
+                                    <button onclick="window.adjustValue('${playerId}', '生命值', 1, ${p.生命值 ?? 0})" class="bg-slate-700 hover:bg-slate-600 px-2 py-0.5 rounded text-xs">+1</button>
+                                </div>
                             </div>
-                        </div>
-                        <!-- 速度 -->
-                        <div class="bg-slate-800/50 p-3 rounded-xl border border-slate-700/50 space-y-2 text-center">
-                            <div class="text-xs text-slate-400">速度</div>
-                            <div class="text-2xl font-bold text-emerald-400">${p.速度 ?? 0}</div>
-                            <div class="flex justify-center gap-1">
-                                <button onclick="window.adjustValue('${playerId}', '速度', -5, ${p.速度 ?? 0})" class="bg-slate-700 hover:bg-slate-600 px-1.5 py-0.5 rounded text-xs">-5</button>
-                                <button onclick="window.adjustValue('${playerId}', '速度', -1, ${p.速度 ?? 0})" class="bg-slate-700 hover:bg-slate-600 px-1.5 py-0.5 rounded text-xs">-1</button>
-                                <button onclick="window.adjustValue('${playerId}', '速度', 1, ${p.速度 ?? 0})" class="bg-slate-700 hover:bg-slate-600 px-1.5 py-0.5 rounded text-xs">+1</button>
-                                <button onclick="window.adjustValue('${playerId}', '速度', 5, ${p.速度 ?? 0})" class="bg-slate-700 hover:bg-slate-600 px-1.5 py-0.5 rounded text-xs">+5</button>
+                            <div class="bg-slate-800/50 p-3 rounded-xl border border-slate-700/50 space-y-2 text-center">
+                                <div class="text-xs text-slate-400">修為</div>
+                                <div class="text-2xl font-bold text-cyan-400">${p.修為 ?? 0}</div>
+                                <div class="flex justify-center gap-1">
+                                    <button onclick="window.adjustValue('${playerId}', '修為', -1, ${p.修為 ?? 0})" class="bg-slate-700 hover:bg-slate-600 px-2 py-0.5 rounded text-xs">-1</button>
+                                    <button onclick="window.adjustValue('${playerId}', '修為', 1, ${p.修為 ?? 0})" class="bg-slate-700 hover:bg-slate-600 px-2 py-0.5 rounded text-xs">+1</button>
+                                </div>
                             </div>
-                        </div>
-                        <!-- 攻擊 -->
-                        <div class="bg-slate-800/50 p-3 rounded-xl border border-slate-700/50 space-y-2 text-center">
-                            <div class="text-xs text-slate-400">攻擊</div>
-                            <div class="text-2xl font-bold text-orange-400">${p.攻擊 ?? 0}</div>
-                            <div class="flex justify-center gap-1">
-                                <button onclick="window.adjustValue('${playerId}', '攻擊', -1, ${p.攻擊 ?? 0})" class="bg-slate-700 hover:bg-slate-600 px-2 py-0.5 rounded text-xs">-1</button>
-                                <button onclick="window.adjustValue('${playerId}', '攻擊', 1, ${p.攻擊 ?? 0})" class="bg-slate-700 hover:bg-slate-600 px-2 py-0.5 rounded text-xs">+1</button>
+                            <div class="bg-slate-800/50 p-3 rounded-xl border border-slate-700/50 space-y-2 text-center">
+                                <div class="text-xs text-slate-400">速度</div>
+                                <div class="text-2xl font-bold text-emerald-400">${p.速度 ?? 0}</div>
+                                <div class="flex justify-center gap-1">
+                                    <button onclick="window.adjustValue('${playerId}', '速度', -1, ${p.速度 ?? 0})" class="bg-slate-700 hover:bg-slate-600 px-2 py-0.5 rounded text-xs">-1</button>
+                                    <button onclick="window.adjustValue('${playerId}', '速度', 1, ${p.速度 ?? 0})" class="bg-slate-700 hover:bg-slate-600 px-2 py-0.5 rounded text-xs">+1</button>
+                                </div>
                             </div>
-                        </div>
-                        <!-- 防禦 -->
-                        <div class="bg-slate-800/50 p-3 rounded-xl border border-slate-700/50 space-y-2 text-center">
-                            <div class="text-xs text-slate-400">防禦</div>
-                            <div class="text-2xl font-bold text-blue-400">${p.防禦 ?? 0}</div>
-                            <div class="flex justify-center gap-1">
-                                <button onclick="window.adjustValue('${playerId}', '防禦', -1, ${p.防禦 ?? 0})" class="bg-slate-700 hover:bg-slate-600 px-2 py-0.5 rounded text-xs">-1</button>
-                                <button onclick="window.adjustValue('${playerId}', '防禦', 1, ${p.防禦 ?? 0})" class="bg-slate-700 hover:bg-slate-600 px-2 py-0.5 rounded text-xs">+1</button>
+                            <div class="bg-slate-800/50 p-3 rounded-xl border border-slate-700/50 space-y-2 text-center">
+                                <div class="text-xs text-slate-400">攻擊</div>
+                                <div class="text-2xl font-bold text-orange-400">${p.攻擊 ?? 0}</div>
+                                <div class="flex justify-center gap-1">
+                                    <button onclick="window.adjustValue('${playerId}', '攻擊', -1, ${p.攻擊 ?? 0})" class="bg-slate-700 hover:bg-slate-600 px-2 py-0.5 rounded text-xs">-1</button>
+                                    <button onclick="window.adjustValue('${playerId}', '攻擊', 1, ${p.攻擊 ?? 0})" class="bg-slate-700 hover:bg-slate-600 px-2 py-0.5 rounded text-xs">+1</button>
+                                </div>
+                            </div>
+                            <div class="bg-slate-800/50 p-3 rounded-xl border border-slate-700/50 space-y-2 text-center">
+                                <div class="text-xs text-slate-400">防禦</div>
+                                <div class="text-2xl font-bold text-blue-400">${p.防禦 ?? 0}</div>
+                                <div class="flex justify-center gap-1">
+                                    <button onclick="window.adjustValue('${playerId}', '防禦', -1, ${p.防禦 ?? 0})" class="bg-slate-700 hover:bg-slate-600 px-2 py-0.5 rounded text-xs">-1</button>
+                                    <button onclick="window.adjustValue('${playerId}', '防禦', 1, ${p.防禦 ?? 0})" class="bg-slate-700 hover:bg-slate-600 px-2 py-0.5 rounded text-xs">+1</button>
+                                </div>
                             </div>
                         </div>
                     </div>
+                `;
+            }, (error) => {
+                console.err("監聽失敗：", error);
+                container.innerHTML = `<div class="text-center py-20 text-red-400">Firebase 連線或權限錯誤：${error.message}</div>`;
+            });
 
-                    <!-- 消耗性道具區 (僅減少按鈕) -->
-                    <div class="space-y-2">
-                        <div class="text-sm font-bold text-cyan-400 border-b border-slate-800 pb-1">隨身消耗品</div>
-                        <div class="grid grid-cols-2 md:grid-cols-5 gap-3">
-                            ${renderPlayerItemBox(playerId, '高效治療繃帶', p.高效治療繃帶)}
-                            ${renderPlayerItemBox(playerId, '修為恢復藥劑', p.修為恢復藥劑)}
-                            ${renderPlayerItemBox(playerId, '異常解除錠', p.異常解除錠)}
-                            ${renderPlayerItemBox(playerId, '解咒符', p.解咒符)}
-                            ${renderPlayerItemBox(playerId, '封魔匣', p.封魔匣)}
-                        </div>
-                    </div>
-
-                    <!-- 技能與裝備資訊 -->
-                    <div class="space-y-4 text-xs text-slate-300 bg-slate-950/50 p-4 rounded-xl border border-slate-800">
-                        <!-- 技能區 -->
-                        <div class="space-y-2 border-b border-slate-800 pb-3">
-                            <div class="flex justify-between items-center">
-                                <span class="font-bold text-cyan-400 text-sm">技能配置</span>
-                                <button onclick="window.addPlayerExtraSkill('${playerId}')" class="bg-slate-800 hover:bg-slate-700 text-xs px-2 py-0.5 rounded border border-slate-700 cursor-pointer">＋ 新增技能</button>
-                            </div>
-                            <div>種族技能：<span class="text-white">${p['技能:種族'] || '-'}</span></div>
-                            <div>職業技能：<span class="text-white">${p['技能:職業'] || '-'}</span></div>
-                            <div>特殊技能：<span class="text-white">${p['技能:特殊'] || '-'}</span></div>
-                            <div>技能 1：<span class="text-white">${p.技能1 || '-'}</span></div>
-                            <div>技能 2：<span class="text-white">${p.技能2 || '-'}</span></div>
-                            
-                            <div class="font-bold text-cyan-400/80 pt-2 border-t border-slate-800/60">額外技能清單</div>
-                            <div class="space-y-1.5">
-                                ${renderPlayerExtraSkills(playerId, p.額外技能 || [])}
-                            </div>
-                        </div>
-
-                        <!-- 裝備欄位區 -->
-                        <div class="space-y-2">
-                            <div class="font-bold text-cyan-400 text-sm">裝備欄位 (可直接修改)</div>
-                            <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                                ${renderEquipTextarea(playerId, '主手', p.裝備_主手)}
-                                ${renderEquipTextarea(playerId, '副手', p.裝備_副手)}
-                                ${renderEquipTextarea(playerId, '頭', p.裝備_頭)}
-                                ${renderEquipTextarea(playerId, '頸', p.裝備_頸)}
-                                ${renderEquipTextarea(playerId, '身', p.裝備_身)}
-                                ${renderEquipTextarea(playerId, '手', p.裝備_手)}
-                                ${renderEquipTextarea(playerId, '腰', p.裝備_腰)}
-                                ${renderEquipTextarea(playerId, '腳', p.裝備_腳)}
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- 其餘道具背包 -->
-                    <div class="space-y-3 bg-slate-950/50 p-4 rounded-xl border border-slate-800">
-                        <div class="flex justify-between items-center">
-                            <span class="font-bold text-xs text-cyan-400">其餘道具背包</span>
-                            <button onclick="window.addPlayerOtherItem('${playerId}')" class="bg-slate-800 hover:bg-slate-700 text-xs px-2.5 py-1 rounded border border-slate-700 cursor-pointer">＋ 新增道具</button>
-                        </div>
-                        <div class="space-y-2">
-                            ${renderPlayerOtherItemsList(playerId, p.其餘道具 || [])}
-                        </div>
-                    </div>
-                </div>
-            `;
-        });
-
-        function renderPlayerItemBox(id, name, val) {
-            const count = val ?? 0;
-            return `
-                <div class="bg-slate-800/40 p-3 rounded-lg border border-slate-700/50 flex flex-col items-center justify-between">
-                    <span class="text-xs text-slate-300 mb-1 text-center">${name}</span>
-                    <span class="text-xl font-bold text-cyan-300 my-1">${count}</span>
-                    <button onclick="window.adjustValue('${id}', '${name}', -1, ${count})" class="bg-slate-700 hover:bg-slate-600 px-3 py-0.5 rounded text-xs cursor-pointer">使用 (-1)</button>
-                </div>
-            `;
-        }
-
-        function renderEquipTextarea(id, slotName, val) {
-            const dbField = `裝備_${slotName}`;
-            return `
-                <div class="flex flex-col gap-0.5 bg-slate-900 p-2 rounded border border-slate-800">
-                    <label class="text-[11px] font-bold text-cyan-400/80">${slotName}</label>
-                    <textarea rows="2" onchange="window.updateField('${id}', '${dbField}', this.value)" class="bg-slate-800 border border-slate-700 p-1.5 rounded text-white text-xs resize-y focus:outline-none focus:border-cyan-500" placeholder="未裝備">${val || ''}</textarea>
-                </div>
-            `;
-        }
-
-        function renderPlayerExtraSkills(id, skills) {
-            if (!skills || skills.length === 0) return '<div class="text-xs text-slate-500">目前無額外技能</div>';
-            return skills.map((sk, idx) => `
-                <div class="flex items-center gap-1.5 bg-slate-900 p-1.5 rounded border border-slate-800">
-                    <textarea rows="2" onchange="window.updatePlayerExtraSkill('${id}', ${idx}, this.value)" class="bg-slate-800 border border-slate-700 p-1.5 rounded flex-1 text-white text-xs resize-y focus:outline-none focus:border-cyan-500" placeholder="技能說明">${sk || ''}</textarea>
-                    <button onclick="window.removePlayerExtraSkill('${id}', ${idx})" class="bg-red-900/60 hover:bg-red-800 text-red-300 px-2.5 py-1 rounded text-xs font-bold cursor-pointer">✕</button>
-                </div>
-            `).join('');
-        }
-
-        function renderPlayerOtherItemsList(id, items) {
-            if (!items || items.length === 0) return '<div class="text-xs text-slate-500 text-center py-1">背包目前無其他道具</div>';
-            return items.map((item, idx) => `
-                <div class="flex items-center gap-2 bg-slate-900 p-2 rounded border border-slate-800 text-xs">
-                    <input type="text" value="${item.name || ''}" onchange="window.updatePlayerItemName('${id}', ${idx}, this.value)" class="bg-slate-800 border border-slate-700 px-2 py-1 rounded flex-1 text-slate-200" placeholder="道具名稱">
-                    <input type="number" value="${item.qty || 1}" onchange="window.updatePlayerItemQty('${id}', ${idx}, parseInt(this.value) || 1)" class="bg-slate-800 border border-slate-700 px-2 py-1 rounded w-16 text-center text-slate-200">
-                    <button onclick="window.removePlayerOtherItem('${id}', ${idx})" class="text-red-400 hover:text-red-300 px-2 py-1 font-bold">✕</button>
-                </div>
-            `).join('');
+        } catch (err) {
+            console.error(err);
+            container.innerHTML = `<div class="text-center py-20 text-red-400">初始化發生錯誤：${err.message}</div>`;
         }
 
         window.adjustValue = async function(playerId, field, delta, currentVal) {
             const newVal = Math.max(0, (currentVal ?? 0) + delta);
             await updateDoc(doc(db, "players", playerId), { [field]: newVal });
-        };
-
-        window.updateField = async function(playerId, field, val) {
-            await updateDoc(doc(db, "players", playerId), { [field]: val });
-        };
-
-        window.addPlayerExtraSkill = async function(playerId) {
-            const docRef = doc(db, "players", playerId);
-            const snap = await getDoc(docRef);
-            if (snap.exists()) {
-                const skills = snap.data().額外技能 || [];
-                const updated = [...skills, "新技能說明"];
-                await updateDoc(docRef, { 額外技能: updated });
-            }
-        };
-
-        window.updatePlayerExtraSkill = async function(playerId, idx, val) {
-            const docRef = doc(db, "players", playerId);
-            const snap = await getDoc(docRef);
-            if (snap.exists()) {
-                let skills = [...(snap.data().額外技能 || [])];
-                skills[idx] = val;
-                await updateDoc(docRef, { 額外技能: skills });
-            }
-        };
-
-        window.removePlayerExtraSkill = async function(playerId, idx) {
-            const docRef = doc(db, "players", playerId);
-            const snap = await getDoc(docRef);
-            if (snap.exists()) {
-                let skills = [...(snap.data().額外技能 || [])];
-                skills.splice(idx, 1);
-                await updateDoc(docRef, { 額外技能: skills });
-            }
-        };
-
-        window.addPlayerOtherItem = async function(playerId) {
-            const docRef = doc(db, "players", playerId);
-            const snap = await getDoc(docRef);
-            if (snap.exists()) {
-                const items = snap.data().其餘道具 || [];
-                const updated = [...items, { name: "新道具", qty: 1 }];
-                await updateDoc(docRef, { 其餘道具: updated });
-            }
-        };
-
-        window.updatePlayerItemName = async function(playerId, idx, name) {
-            const docRef = doc(db, "players", playerId);
-            const snap = await getDoc(docRef);
-            if (snap.exists()) {
-                let items = [...(snap.data().其餘道具 || [])];
-                items[idx].name = name;
-                await updateDoc(docRef, { 其餘道具: items });
-            }
-        };
-
-        window.updatePlayerItemQty = async function(playerId, idx, qty) {
-            const docRef = doc(db, "players", playerId);
-            const snap = await getDoc(docRef);
-            if (snap.exists()) {
-                let items = [...(snap.data().其餘道具 || [])];
-                items[idx].qty = qty;
-                await updateDoc(docRef, { 其餘道具: items });
-            }
-        };
-
-        window.removePlayerOtherItem = async function(playerId, idx) {
-            const docRef = doc(db, "players", playerId);
-            const snap = await getDoc(docRef);
-            if (snap.exists()) {
-                let items = [...(snap.data().其餘道具 || [])];
-                items.splice(idx, 1);
-                await updateDoc(docRef, { 其餘道具: items });
-            }
         };
     </script>
 </body>
