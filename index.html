@@ -85,14 +85,14 @@
                             ${getStatHtml('防禦', '防禦', 'text-blue-400')}
                         </div>
 
-                        <!-- 狀態清單區 -->
+                        <!-- 狀態清單區 (已改為「狀態欄」與 gm.html 同步) -->
                         <div class="space-y-2 bg-slate-800/40 p-4 rounded-xl border border-slate-700/50">
                             <div class="flex justify-between items-center">
                                 <span class="font-bold text-cyan-400 text-sm">目前狀態 / 異常效果清單</span>
                                 <button onclick="window.addPlayerStatus('${playerId}')" class="bg-slate-800 hover:bg-slate-700 text-xs px-2 py-0.5 rounded border border-slate-700 cursor-pointer">＋ 新增狀態</button>
                             </div>
                             <div class="space-y-1.5">
-                                ${renderPlayerStatuses(playerId, p.狀態清單 || [])}
+                                ${renderPlayerStatuses(playerId, p.狀態欄 || [])}
                             </div>
                         </div>
 
@@ -232,9 +232,9 @@
             const docRef = doc(db, "players", playerId);
             const snap = await getDoc(docRef);
             if (snap.exists()) {
-                const statuses = snap.data().狀態清單 || [];
+                const statuses = snap.data().狀態欄 || [];
                 const updated = [...statuses, "新狀態說明"];
-                await updateDoc(docRef, { 狀態清單: updated });
+                await updateDoc(docRef, { 狀態欄: updated });
             }
         };
 
@@ -242,9 +242,9 @@
             const docRef = doc(db, "players", playerId);
             const snap = await getDoc(docRef);
             if (snap.exists()) {
-                let statuses = [...(snap.data().狀態清單 || [])];
+                let statuses = [...(snap.data().狀態欄 || [])];
                 statuses[idx] = val;
-                await updateDoc(docRef, { 狀態清單: statuses });
+                await updateDoc(docRef, { 狀態欄: statuses });
             }
         };
 
@@ -252,9 +252,9 @@
             const docRef = doc(db, "players", playerId);
             const snap = await getDoc(docRef);
             if (snap.exists()) {
-                let statuses = [...(snap.data().狀態清單 || [])];
+                let statuses = [...(snap.data().狀態欄 || [])];
                 statuses.splice(idx, 1);
-                await updateDoc(docRef, { 狀態清單: statuses });
+                await updateDoc(docRef, { 狀態欄: statuses });
             }
         };
 
