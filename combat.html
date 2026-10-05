@@ -12,6 +12,7 @@
         .combat-card.monster { border-left: 5px solid #f43f5e; background: #221821; }
         .combat-card.boss { border-left: 5px solid #a855f7; background: #2a1b3d; }
         .combat-card.player { border-left: 5px solid #38bdf8; }
+        .combat-card.ally { border-left: 5px solid #10b981; background: #132e25; }
         .info-group { flex: 1; min-width: 280px; }
         
         /* 數值網格與卡片微調 */
@@ -40,6 +41,8 @@
         .btn-danger:hover { background: #e11d48; }
         .btn-boss { background: #a855f7; color: #fff; }
         .btn-boss:hover { background: #9333ea; }
+        .btn-success { background: #10b981; color: #fff; }
+        .btn-success:hover { background: #059669; }
         .btn-secondary { background: #334155; color: #cbd5e1; }
         .btn-secondary:hover { background: #475569; color: #fff; }
         .btn-sm { padding: 4px 8px; font-size: 0.75rem; font-weight: bold; }
@@ -64,7 +67,7 @@
 </head>
 <body>
 
-    <h1>⚔️ TRPG 戰鬥動態排序與 Boss 面板[cite: 10]</h1>
+    <h1>⚔️ TRPG 戰鬥動態排序與 Boss 面板</h1>
     <p style="color: #94a3b8;">勾選參戰玩家，系統將自動依據人數計算 Boss 血量加成，並統一按速度排序。</p>
 
     <!-- 戰鬥序列列表 -->
@@ -303,10 +306,12 @@
             battleList.innerHTML = "";
             allEntities.forEach((item, index) => {
                 const isMonster = item.type === 'monster';
-                const isBoss = isMonster && item.isBoss;
+                const isAlly = isMonster && item.isAlly;
+                const isBoss = isMonster && item.isBoss && !isAlly;
                 
                 let cardClass = 'player';
-                if (isBoss) cardClass = 'boss';
+                if (isAlly) cardClass = 'ally';
+                else if (isBoss) cardClass = 'boss';
                 else if (isMonster) cardClass = 'monster';
 
                 const card = document.createElement("div");
@@ -315,7 +320,8 @@
                 const name = item.代號 || item.姓名 || '未命名';
                 const element = item.屬性 ? `屬性: ${item.屬性}` : '';
                 let tag = `🛡 玩家 (${item.姓名})`;
-                if (isBoss) tag = `👑 BOSS [${element}]`;
+                if (isAlly) tag = `🤝 盟友/使魔 [${element}]`;
+                else if (isBoss) tag = `👑 BOSS [${element}]`;
                 else if (isMonster) tag = `👹 魔物 [${element}]`;
 
                 const speed = item["速度"] !== undefined ? item["速度"] : (item["速度初始值"] || 0);
@@ -393,36 +399,42 @@
                 html += `<div class="control-panel" style="max-width: 250px;">`;
                 
                 if (!isMonster) {
-                    html += `<div style="color: #38bdf8; font-weight: bold; margin-bottom: 6px;">🎒 玩家道具數量調整</div>`;
+                    html += `<div style="color: #38bdf8; font-weight: bold; margin-bottom: 6px;">🎒 玩家道具與符紙管理</div>`;
                     html += `<div class="item-grid">
                         <div class="item-row"><span>繃帶</span><input type="number" value="${item["高效治療繃帶"] || 0}" onchange="window.directUpdateStat('${item.id}', 'player', '高效治療繃帶', this.value)"></div>
                         <div class="item-row"><span>藥劑</span><input type="number" value="${item["修為恢復藥劑"] || 0}" onchange="window.directUpdateStat('${item.id}', 'player', '修為恢復藥劑', this.value)"></div>
                         <div class="item-row"><span>解錠</span><input type="number" value="${item["異常解除錠"] || 0}" onchange="window.directUpdateStat('${item.id}', 'player', '異常解除錠', this.value)"></div>
                         <div class="item-row"><span>解咒</span><input type="number" value="${item["解咒符"] || 0}" onchange="window.directUpdateStat('${item.id}', 'player', '解咒符', this.value)"></div>
                         <div class="item-row" style="grid-column: span 2;"><span>封魔匣</span><input type="number" value="${item["封魔匣"] || 0}" onchange="window.directUpdateStat('${item.id}', 'player', '封魔匣', this.value)"></div>
+                        <div class="item-row"><span>金光符</span><input type="number" value="${item["金光符"] || 0}" onchange="window.directUpdateStat('${item.id}', 'player', '金光符', this.value)"></div>
+                        <div class="item-row"><span>鎮邪符</span><input type="number" value="${item["鎮邪符"] || 0}" onchange="window.directUpdateStat('${item.id}', 'player', '鎮邪符', this.value)"></div>
+                        <div class="item-row"><span>神行符</span><input type="number" value="${item["神行符"] || 0}" onchange="window.directUpdateStat('${item.id}', 'player', '神行符', this.value)"></div>
+                        <div class="item-row"><span>護身符</span><input type="number" value="${item["護身符"] || 0}" onchange="window.directUpdateStat('${item.id}', 'player', '護身符', this.value)"></div>
                     </div>`;
+                    
+                    html += `<div style="margin-top: 8px;"><label style="font-size:0.75rem; color:#94a3b8;">狀態 / 效果</label><input type="text" value="${item["狀態"] || ''}" placeholder="例如：中毒、護體中" onchange="window.directUpdateStat('${item.id}', 'player', '狀態', this.value)" style="font-size:0.8rem; padding:4px;"></div>`;
                 } else {
-                    html += `<div style="color: ${isBoss ? '#c084fc' : '#f43f5e'}; font-weight: bold; margin-bottom: 6px;">${isBoss ? '👑 技能施放 (自動扣修為)' : '👹 技能施放 (自動扣修為)'}</div>`;
+                    html += `<div style="color: ${isAlly ? '#10b981' : (isBoss ? '#c084fc' : '#f43f5e')}; font-weight: bold; margin-bottom: 6px;">${isAlly ? '🤝 使魔/盟友 操控面板' : (isBoss ? '👑 BOSS 技能施放' : '👹 魔物技能施放')}</div>`;
                     
                     // 技能 1
                     if (item.skill1Name && item.skill1Name !== '無') {
                         html += `<div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px; font-size:0.8rem;">
                             <span>${item.skill1Name} <b style="color:#38bdf8;">(-${item.skill1Cost || 0})</b></span>
-                            <button class="btn-sm" style="background:${isBoss ? '#a855f7' : '#f43f5e'}; color:#fff;" onclick="window.useMonsterSkill('${item.id}', '${item.skill1Name}', ${item.skill1Cost || 0})">施放</button>
+                            <button class="btn-sm" style="background:${isBoss ? '#a855f7' : (isAlly ? '#10b981' : '#f43f5e')}; color:#fff;" onclick="window.useMonsterSkill('${item.id}', '${item.skill1Name}', ${item.skill1Cost || 0})">施放</button>
                         </div>`;
                     }
                     // 技能 2
                     if (item.skill2Name && item.skill2Name !== '無') {
                         html += `<div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px; font-size:0.8rem;">
                             <span>${item.skill2Name} <b style="color:#38bdf8;">(-${item.skill2Cost || 0})</b></span>
-                            <button class="btn-sm" style="background:${isBoss ? '#a855f7' : '#f43f5e'}; color:#fff;" onclick="window.useMonsterSkill('${item.id}', '${item.skill2Name}', ${item.skill2Cost || 0})">施放</button>
+                            <button class="btn-sm" style="background:${isBoss ? '#a855f7' : (isAlly ? '#10b981' : '#f43f5e')}; color:#fff;" onclick="window.useMonsterSkill('${item.id}', '${item.skill2Name}', ${item.skill2Cost || 0})">施放</button>
                         </div>`;
                     }
                     // 技能 3
                     if (item.skill3Name && item.skill3Name !== '無') {
                         html += `<div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px; font-size:0.8rem;">
                             <span>${item.skill3Name} <b style="color:#38bdf8;">(-${item.skill3Cost || 0})</b></span>
-                            <button class="btn-sm" style="background:${isBoss ? '#a855f7' : '#f43f5e'}; color:#fff;" onclick="window.useMonsterSkill('${item.id}', '${item.skill3Name}', ${item.skill3Cost || 0})">施放</button>
+                            <button class="btn-sm" style="background:${isBoss ? '#a855f7' : (isAlly ? '#10b981' : '#f43f5e')}; color:#fff;" onclick="window.useMonsterSkill('${item.id}', '${item.skill3Name}', ${item.skill3Cost || 0})">施放</button>
                         </div>`;
                     }
 
@@ -430,7 +442,15 @@
                         html += `<div style="color:#94a3b8; font-size:0.75rem; margin-bottom:6px;">無設定主動技能</div>`;
                     }
 
-                    html += `<button class="btn-danger btn-sm" style="width:100%; margin-top:8px;" onclick="window.deleteMonsterItem('${item.id}')">撤下${isBoss ? ' BOSS' : '魔物'}</button>`;
+                    // 狀態欄位
+                    html += `<div style="margin-top: 6px; margin-bottom: 6px;"><label style="font-size:0.75rem; color:#94a3b8;">狀態 / 效果</label><input type="text" value="${item["狀態"] || ''}" placeholder="例如：定身、狂暴" onchange="window.directUpdateStat('${item.id}', 'monster', '狀態', this.value)" style="font-size:0.8rem; padding:4px;"></div>`;
+
+                    // 轉化盟友/使魔按鍵
+                    const toggleAllyText = isAlly ? "🔄 恢復為敵對魔物" : "🤝 轉化為盟友/使魔";
+                    const toggleAllyClass = isAlly ? "btn-secondary" : "btn-success";
+                    html += `<button class="${toggleAllyClass} btn-sm" style="width:100%; margin-bottom:4px;" onclick="window.toggleMonsterAlly('${item.id}', ${!isAlly})">${toggleAllyText}</button>`;
+                    
+                    html += `<button class="btn-danger btn-sm" style="width:100%;" onclick="window.deleteMonsterItem('${item.id}')">撤下${isBoss ? ' BOSS' : '魔物'}</button>`;
                 }
 
                 html += `</div>`;
@@ -438,6 +458,18 @@
                 battleList.appendChild(card);
             });
         }
+
+        // 切換魔物是否為盟友/使魔
+        window.toggleMonsterAlly = async (monsterId, makeAlly) => {
+            try {
+                await updateDoc(doc(db, "monsters", monsterId), {
+                    isAlly: makeAlly
+                });
+            } catch (e) {
+                console.error(e);
+                alert("狀態切換失敗！");
+            }
+        };
 
         // 點擊技能按鈕：自動扣除修為
         window.useMonsterSkill = async (monsterId, skillName, cost) => {
@@ -470,17 +502,20 @@
             
             if (!targetItem) return;
 
-            let newValue = Number(value);
-            if (isNaN(newValue)) return;
+            let newValue = value;
+            if (fieldName !== '狀態') {
+                newValue = Number(value);
+                if (isNaN(newValue)) return;
 
-            let maxVal = fieldName === '生命值' ? Number(targetItem['生命初始值'] || 999999) : 
-                         fieldName === '修為' ? Number(targetItem['修為初始值'] || 999999) : 999999;
+                let maxVal = fieldName === '生命值' ? Number(targetItem['生命初始值'] || 999999) : 
+                             fieldName === '修為' ? Number(targetItem['修為初始值'] || 999999) : 999999;
 
-            if (fieldName === '生命值' || fieldName === '修為') {
-                if (newValue < 0) newValue = 0;
-                if (newValue > maxVal) newValue = maxVal;
-            } else {
-                if (newValue < 0) newValue = 0;
+                if (fieldName === '生命值' || fieldName === '修為') {
+                    if (newValue < 0) newValue = 0;
+                    if (newValue > maxVal) newValue = maxVal;
+                } else {
+                    if (newValue < 0) newValue = 0;
+                }
             }
 
             try {
@@ -529,7 +564,7 @@
             if (!name) { alert("請輸入魔物名稱！"); return; }
 
             const templateData = {
-                姓名: name, 代號: name, isBoss: false,
+                姓名: name, 代號: name, isBoss: false, isAlly: false, 狀態: "",
                 屬性: document.getElementById("m-element").value,
                 速度: Number(document.getElementById("m-speed").value) || 10,
                 速度初始值: Number(document.getElementById("m-speed").value) || 10,
@@ -562,7 +597,7 @@
             if (!name) { alert("請輸入 BOSS 名稱！"); return; }
 
             const templateData = {
-                姓名: name, 代號: name, isBoss: true,
+                姓名: name, 代號: name, isBoss: true, isAlly: false, 狀態: "",
                 屬性: document.getElementById("b-element").value,
                 速度: Number(document.getElementById("b-speed").value) || 15,
                 速度初始值: Number(document.getElementById("b-speed").value) || 15,
@@ -605,7 +640,9 @@
             const battleInstance = {
                 ...tmpl,
                 生命值: finalHp,
-                生命初始值: finalHp
+                生命初始值: finalHp,
+                isAlly: false,
+                狀態: ""
             };
             delete battleInstance.id;
 
