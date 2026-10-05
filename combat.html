@@ -34,7 +34,7 @@
         .btn-adjust { background: #1f2937; color: #9ca3af; border: 1px solid #374151; border-radius: 3px; padding: 2px 4px; font-size: 0.7rem; cursor: pointer; }
         .btn-adjust:hover { background: #374151; color: #ffffff; }
 
-        input, select { width: 100%; padding: 6px; background: #0f172a; border: 1px solid #475569; color: #fff; border-radius: 4px; box-sizing: border-box; margin-top: 4px; }
+        input, select, textarea { width: 100%; padding: 6px; background: #0f172a; border: 1px solid #475569; color: #fff; border-radius: 4px; box-sizing: border-box; margin-top: 4px; }
         button { background: #38bdf8; color: #0f172a; border: none; padding: 8px 14px; font-weight: bold; border-radius: 4px; cursor: pointer; }
         button:hover { background: #0ea5e9; }
         .btn-danger { background: #f43f5e; color: #fff; }
@@ -180,7 +180,7 @@
 
     <script type="module">
         import { db } from "./firebase-config.js";
-        import { collection, onSnapshot, addDoc, deleteDoc, doc, updateDoc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+        import { collection, onSnapshot, addDoc, deleteDoc, doc, updateDoc, getDoc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
         const battleList = document.getElementById("battle-list");
         const checkboxContainer = document.getElementById("player-checkboxes");
@@ -303,6 +303,20 @@
             });
         }
 
+        // 渲染狀態欄位清單（支援陣列動態增刪，與 index_2.html 同步）
+        function renderStatusesList(id, statuses, collectionType) {
+            const list = statuses || [];
+            if (list.length === 0) {
+                return `<div style="font-size:0.75rem; color:#94a3b8; margin-bottom:4px;">目前無特殊狀態</div>`;
+            }
+            return list.map((st, idx) => `
+                <div style="display:flex; align-items:center; gap:4px; margin-bottom:4px;">
+                    <textarea rows="2" style="font-size:0.8rem; padding:4px; background:#0f172a; border:1px solid #475569; color:#fff; border-radius:4px; flex:1; resize:y;" onchange="window.updateStatusItem('${id}', '${collectionType}', ${idx}, this.value)">${st || ''}</textarea>
+                    <button class="btn-sm btn-danger" style="padding:2px 6px;" onclick="window.removeStatusItem('${id}', '${collectionType}', ${idx})">✕</button>
+                </div>
+            `).join('');
+        }
+
         function updateAndRender() {
             const activePlayers = allPlayersData.filter(p => selectedPlayerIds.has(p.id));
             let allEntities = [...activePlayers, ...monstersData];
@@ -348,17 +362,7 @@
                 const atk = item["攻擊"] || 0;
                 const def = item["防禦"] || 0;
                 const colType = isMonster ? 'monster' : 'player';
-
-                  <!-- 狀態清單區 (已改為「狀態欄」與 gm.html 同步) -->
-                        <div class="space-y-2 bg-slate-800/40 p-4 rounded-xl border border-slate-700/50">
-                            <div class="flex justify-between items-center">
-                                <span class="font-bold text-cyan-400 text-sm">目前狀態 / 異常效果清單</span>
-                                <button onclick="window.addPlayerStatus('${playerId}')" class="bg-slate-800 hover:bg-slate-700 text-xs px-2 py-0.5 rounded border border-slate-700 cursor-pointer">＋ 新增狀態</button>
-                            </div>
-                            <div class="space-y-1.5">
-                                ${renderPlayerStatuses(playerId, p.狀態欄 || [])}
-                            </div>
-                        </div>
+                const statuses = item["狀態欄"] || [];
 
                 let html = `
                     <div class="info-group">
@@ -436,8 +440,15 @@
                         <div class="item-row"><span>符紙</span><input type="number" value="${item["符紙"] || 0}" onchange="window.directUpdateStat('${item.id}', 'player', '符紙', this.value)"></div>
                         <div class="item-row"><span>封魔匣</span><input type="number" value="${item["封魔匣"] || 0}" onchange="window.directUpdateStat('${item.id}', 'player', '封魔匣', this.value)"></div>
                     </div>`;
-                    html += `<div style="margin-top:6px;"><span style="font-size:0.75rem; color:#94a3b8;">狀態欄位 (Buff/DeBuff)</span>
-                        <input type="text" style="font-size:0.8rem; padding:4px;" value="${currentStatus}" placeholder="例如：靈氣護體、中毒" onchange="window.directUpdateStat('${item.id}', 'player', '狀態', this.value)"></div>`;
+                    
+                    // 狀態欄陣列清單
+                    html += `<div style="margin-top:8px; border-top:1px solid #334155; pt-2;">
+                        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px;">
+                            <span style="font-size:0.75rem; color:#94a3b8;">狀態欄位 (Buff/DeBuff)</span>
+                            <button class="btn-sm" style="padding:1px 6px; font-size:0.7rem;" onclick="window.addStatusItem('${item.id}', 'player')">＋ 新增</button>
+                        </div>
+                        ${renderStatusesList(item.id, statuses, 'player')}
+                    </div>`;
                 } else {
                     // 魔物 / 盟友 / BOSS 專屬技能與狀態欄位
                     let panelTitle = isBoss ? '👑 BOSS 技能施放' : (isAlly ? '🤝 盟友技能施放' : '👹 魔物技能施放');
@@ -468,9 +479,14 @@
                         html += `<div style="color:#94a3b8; font-size:0.75rem; margin-bottom:6px;">無設定主動技能</div>`;
                     }
 
-                    // 狀態欄位
-                    html += `<div style="margin-top:6px;"><span style="font-size:0.75rem; color:#94a3b8;">狀態欄位 (Buff/DeBuff)</span>
-                        <input type="text" style="font-size:0.8rem; padding:4px;" value="${currentStatus}" placeholder="例如：狂暴、定身" onchange="window.directUpdateStat('${item.id}', 'monster', '狀態', this.value)"></div>`;
+                    // 狀態欄陣列清單
+                    html += `<div style="margin-top:8px; border-top:1px solid #334155; pt-2;">
+                        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px;">
+                            <span style="font-size:0.75rem; color:#94a3b8;">狀態欄位 (Buff/DeBuff)</span>
+                            <button class="btn-sm" style="padding:1px 6px; font-size:0.7rem;" onclick="window.addStatusItem('${item.id}', 'monster')">＋ 新增</button>
+                        </div>
+                        ${renderStatusesList(item.id, statuses, 'monster')}
+                    </div>`;
 
                     html += `<button class="btn-danger btn-sm" style="width:100%; margin-top:8px;" onclick="window.deleteMonsterItem('${item.id}')">撤下此角色</button>`;
                 }
@@ -480,6 +496,40 @@
                 battleList.appendChild(card);
             });
         }
+
+        // 狀態欄陣列的動態操作函式（新增、修改、刪除），確保與 index_2.html 完全同步
+        window.addStatusItem = async (id, collectionType) => {
+            const targetCol = collectionType === 'player' ? "players" : "monsters";
+            const docRef = doc(db, targetCol, id);
+            const snap = await getDoc(docRef);
+            if (snap.exists()) {
+                const statuses = snap.data().狀態欄 || [];
+                const updated = [...statuses, "新狀態說明"];
+                await updateDoc(docRef, { 狀態欄: updated });
+            }
+        };
+
+        window.updateStatusItem = async (id, collectionType, idx, val) => {
+            const targetCol = collectionType === 'player' ? "players" : "monsters";
+            const docRef = doc(db, targetCol, id);
+            const snap = await getDoc(docRef);
+            if (snap.exists()) {
+                let statuses = [...(snap.data().狀態欄 || [])];
+                statuses[idx] = val;
+                await updateDoc(docRef, { 狀態欄: statuses });
+            }
+        };
+
+        window.removeStatusItem = async (id, collectionType, idx) => {
+            const targetCol = collectionType === 'player' ? "players" : "monsters";
+            const docRef = doc(db, targetCol, id);
+            const snap = await getDoc(docRef);
+            if (snap.exists()) {
+                let statuses = [...(snap.data().狀態欄 || [])];
+                statuses.splice(idx, 1);
+                await updateDoc(docRef, { 狀態欄: statuses });
+            }
+        };
 
         // 點擊技能按鈕：自動扣除修為
         window.useMonsterSkill = async (monsterId, skillName, cost) => {
@@ -511,20 +561,17 @@
             
             if (!targetItem) return;
 
-            let newValue = value;
-            if (fieldName !== '狀態') {
-                newValue = Number(value);
-                if (isNaN(newValue)) return;
+            let newValue = Number(value);
+            if (isNaN(newValue)) return;
 
-                let maxVal = fieldName === '生命值' ? Number(targetItem['生命初始值'] || 999999) : 
-                             fieldName === '修為' ? Number(targetItem['修為初始值'] || 999999) : 999999;
+            let maxVal = fieldName === '生命值' ? Number(targetItem['生命初始值'] || 999999) : 
+                         fieldName === '修為' ? Number(targetItem['修為初始值'] || 999999) : 999999;
 
-                if (fieldName === '生命值' || fieldName === '修為') {
-                    if (newValue < 0) newValue = 0;
-                    if (newValue > maxVal) newValue = maxVal;
-                } else {
-                    if (newValue < 0) newValue = 0;
-                }
+            if (fieldName === '生命值' || fieldName === '修為') {
+                if (newValue < 0) newValue = 0;
+                if (newValue > maxVal) newValue = maxVal;
+            } else {
+                if (newValue < 0) newValue = 0;
             }
 
             try {
@@ -587,7 +634,7 @@
                 攻擊初始值: Number(document.getElementById("m-atk").value) || 15,
                 防禦: Number(document.getElementById("m-def").value) || 5,
                 防禦初始值: Number(document.getElementById("m-def").value) || 5,
-                狀態: "",
+                狀態欄: [],
                 skill1Name: document.getElementById("m-skill1-name").value.trim(),
                 skill1Cost: Number(document.getElementById("m-skill1-cost").value) || 0,
                 skill2Name: document.getElementById("m-skill2-name").value.trim(),
@@ -621,7 +668,7 @@
                 攻擊初始值: Number(document.getElementById("b-atk").value) || 25,
                 防禦: Number(document.getElementById("b-def").value) || 10,
                 防禦初始值: Number(document.getElementById("b-def").value) || 10,
-                狀態: "",
+                狀態欄: [],
                 skill1Name: document.getElementById("b-skill1-name").value.trim(),
                 skill1Cost: Number(document.getElementById("b-skill1-cost").value) || 0,
                 skill2Name: document.getElementById("b-skill2-name").value.trim(),
@@ -637,7 +684,7 @@
             } catch (e) { console.error(e); alert("儲存 BOSS 失敗"); }
         });
 
-        // 快速召喚敵人/盟友到戰場上 (支援強制指定 faction: 'monster' 或 'ally')
+        // 快速召喚敵人/盟友到戰場上
         window.spawnEnemyFromTemplate = async (templateId, overrideFaction = null) => {
             const tmpl = monsterTemplatesData.find(t => t.id === templateId);
             if (!tmpl) return;
