@@ -81,7 +81,7 @@
     <!-- 魔物與 BOSS 範本資料庫面板 -->
     <div class="panel" style="border-color: #64748b;">
         <h2>📚 魔物 / 盟友 / BOSS 範本資料庫 (可重複快速召喚)</h2>
-        <p style="font-size: 0.85rem; color: #94a3b8; margin-top: -5px;">在此建立常用敵人或我方使魔/盟友的數值模板，點擊「魔物上場」或「盟友上場」即可一鍵部署到戰場上。</p>
+        <p style="font-size: 0.85rem; color: #94a3b8; margin-top: -5px;">在此建立常用敵人或我方使魔/盟友的數值模板，點擊「快速上場」即可一鍵部署到戰場上。</p>
         <div id="template-container" class="template-list">載入範本資料庫中...</div>
     </div>
 
@@ -273,13 +273,15 @@
             templateContainer.innerHTML = "";
             monsterTemplatesData.forEach(tmpl => {
                 const isBoss = tmpl.isBoss;
+                const isAlly = tmpl.faction === 'ally';
                 const card = document.createElement("div");
                 card.className = "template-card";
-                card.style.borderColor = isBoss ? '#a855f7' : '#475569';
+                card.style.borderColor = isBoss ? '#a855f7' : (isAlly ? '#10b981' : '#475569');
                 
                 let icon = '👹';
                 let titleColor = '#38bdf8';
                 if (isBoss) { icon = '👑'; titleColor = '#c084fc'; }
+                else if (isAlly) { icon = '🤝'; titleColor = '#34d399'; }
 
                 card.innerHTML = `
                     <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 4px;">
@@ -290,12 +292,7 @@
                         生命: ${tmpl.生命初始值} | 攻: ${tmpl.攻擊} | 防: ${tmpl.防禦}
                     </div>
                     <div style="display:flex; gap: 4px;">
-                        ${isBoss ? `
-                            <button class="btn-sm" style="flex:1; background:#a855f7; color:#fff;" onclick="window.spawnEnemyFromTemplate('${tmpl.id}', 'monster')">👑 BOSS上場</button>
-                        ` : `
-                            <button class="btn-sm" style="flex:1; background:#f43f5e; color:#fff;" onclick="window.spawnEnemyFromTemplate('${tmpl.id}', 'monster')">👹 魔物上場</button>
-                            <button class="btn-sm" style="flex:1; background:#10b981; color:#fff;" onclick="window.spawnEnemyFromTemplate('${tmpl.id}', 'ally')">🤝 盟友上場</button>
-                        `}
+                        <button class="btn-sm" style="flex:1; background:${isBoss ? '#a855f7' : (isAlly ? '#10b981' : '#38bdf8')}; color:#0f172a;" onclick="window.spawnEnemyFromTemplate('${tmpl.id}')">⚡ 快速上場</button>
                         <button class="btn-sm btn-danger" onclick="window.deleteTemplate('${tmpl.id}')">刪除</button>
                     </div>
                 `;
@@ -348,9 +345,6 @@
                 const atk = item["攻擊"] || 0;
                 const def = item["防禦"] || 0;
                 const colType = isMonster ? 'monster' : 'player';
-
-                // 同步抓取狀態 (優先抓取 "狀態" 或 "目前狀態/異常效果")
-                const currentStatus = item["狀態"] !== undefined ? item["狀態"] : (item["目前狀態/異常效果"] || '');
 
                 let html = `
                     <div class="info-group">
@@ -429,7 +423,7 @@
                         <div class="item-row"><span>封魔匣</span><input type="number" value="${item["封魔匣"] || 0}" onchange="window.directUpdateStat('${item.id}', 'player', '封魔匣', this.value)"></div>
                     </div>`;
                     html += `<div style="margin-top:6px;"><span style="font-size:0.75rem; color:#94a3b8;">狀態欄位 (Buff/DeBuff)</span>
-                        <input type="text" style="font-size:0.8rem; padding:4px;" value="${currentStatus}" placeholder="例如：靈氣護體、中毒" onchange="window.directUpdateStat('${item.id}', 'player', '狀態', this.value)"></div>`;
+                        <input type="text" style="font-size:0.8rem; padding:4px;" value="${item["狀態"] || ''}" placeholder="例如：靈氣護體、中毒" onchange="window.directUpdateStat('${item.id}', 'player', '狀態', this.value)"></div>`;
                 } else {
                     // 魔物 / 盟友 / BOSS 專屬技能與狀態欄位
                     let panelTitle = isBoss ? '👑 BOSS 技能施放' : (isAlly ? '🤝 盟友技能施放' : '👹 魔物技能施放');
@@ -462,7 +456,7 @@
 
                     // 狀態欄位
                     html += `<div style="margin-top:6px;"><span style="font-size:0.75rem; color:#94a3b8;">狀態欄位 (Buff/DeBuff)</span>
-                        <input type="text" style="font-size:0.8rem; padding:4px;" value="${currentStatus}" placeholder="例如：狂暴、定身" onchange="window.directUpdateStat('${item.id}', 'monster', '狀態', this.value)"></div>`;
+                        <input type="text" style="font-size:0.8rem; padding:4px;" value="${item["狀態"] || ''}" placeholder="例如：狂暴、定身" onchange="window.directUpdateStat('${item.id}', 'monster', '狀態', this.value)"></div>`;
 
                     html += `<button class="btn-danger btn-sm" style="width:100%; margin-top:8px;" onclick="window.deleteMonsterItem('${item.id}')">撤下此角色</button>`;
                 }
@@ -629,8 +623,8 @@
             } catch (e) { console.error(e); alert("儲存 BOSS 失敗"); }
         });
 
-        // 快速召喚敵人/盟友到戰場上 (支援強制指定 faction: 'monster' 或 'ally')
-        window.spawnEnemyFromTemplate = async (templateId, overrideFaction = null) => {
+        // 快速召喚敵人/盟友到戰場上
+        window.spawnEnemyFromTemplate = async (templateId) => {
             const tmpl = monsterTemplatesData.find(t => t.id === templateId);
             if (!tmpl) return;
 
@@ -644,7 +638,6 @@
 
             const battleInstance = {
                 ...tmpl,
-                faction: overrideFaction ? overrideFaction : (tmpl.faction || 'monster'),
                 生命值: finalHp,
                 生命初始值: finalHp
             };
