@@ -401,12 +401,29 @@
                 if (!isMonster) {
                     html += `<div style="color: #38bdf8; font-weight: bold; margin-bottom: 6px;">🎒 玩家道具與符紙管理</div>`;
                     html += `<div class="item-grid">
-                        <div class="item-row"><span>繃帶</span><input type="number" value="${item["高效治療繃帶"] || 0}" onchange="window.directUpdateStat('${item.id}', 'player', '高效治療繃帶', this.value)"></div>
-                        <div class="item-row"><span>藥劑</span><input type="number" value="${item["修為恢復藥劑"] || 0}" onchange="window.directUpdateStat('${item.id}', 'player', '修為恢復藥劑', this.value)"></div>
-                        <div class="item-row"><span>解錠</span><input type="number" value="${item["異常解除錠"] || 0}" onchange="window.directUpdateStat('${item.id}', 'player', '異常解除錠', this.value)"></div>
-                        <div class="item-row"><span>封魔匣</span><input type="number" value="${item["封魔匣"] || 0}" onchange="window.directUpdateStat('${item.id}', 'player', '封魔匣', this.value)"></div>
-                        <div class="item-row" style="grid-column: span 2;"><span>符紙</span><input type="number" value="${item["符紙"] || 0}" onchange="window.directUpdateStat('${item.id}', 'player', '符紙', this.value)"></div>
-                    </div>`;
+                        html += `<div class="control-panel" style="max-width: 250px;">`;
+
+if (!isMonster) {
+    html += `<div style="color: #38bdf8; font-weight: bold; margin-bottom: 6px;">🎒 玩家道具與符紙管理</div>`;
+    html += `<div class="item-grid">
+        <div class="item-row"><span>繃帶</span><input type="number" value="${item["高效治療繃帶"] || 0}" onchange="window.directUpdateStat('${item.id}', 'player', '高效治療繃帶', this.value)"></div>
+        <div class="item-row"><span>藥劑</span><input type="number" value="${item["修為恢復藥劑"] || 0}" onchange="window.directUpdateStat('${item.id}', 'player', '修為恢復藥劑', this.value)"></div>
+        <div class="item-row"><span>解錠</span><input type="number" value="${item["異常解除錠"] || 0}" onchange="window.directUpdateStat('${item.id}', 'player', '異常解除錠', this.value)"></div>
+        <div class="item-row"><span>解咒符</span><input type="number" value="${item["解咒符"] || 0}" onchange="window.directUpdateStat('${item.id}', 'player', '解咒符', this.value)"></div>
+        <div class="item-row"><span>封魔匣</span><input type="number" value="${item["封魔匣"] || 0}" onchange="window.directUpdateStat('${item.id}', 'player', '封魔匣', this.value)"></div>
+        <div class="item-row" style="grid-column: span 2;"><span>符紙</span><input type="number" value="${item["符紙"] || 0}" onchange="window.directUpdateStat('${item.id}', 'player', '符紙', this.value)"></div>
+    </div>`;
+    
+    // 兼容處理狀態（支援陣列或字串顯示）
+    let statusDisplay = "";
+    if (Array.isArray(item["狀態"])) {
+        statusDisplay = item["狀態"].join(", ");
+    } else {
+        statusDisplay = item["狀態"] || '';
+    }
+
+    html += `<div style="margin-top: 8px;"><label style="font-size:0.75rem; color:#94a3b8;">狀態 / 效果</label><input type="text" value="${statusDisplay}" placeholder="例如：中毒、護體中" onchange="window.directUpdateStat('${item.id}', 'player', '狀態', this.value)" style="font-size:0.8rem; padding:4px;"></div>`;
+}
                     
                     html += `<div style="margin-top: 8px;"><label style="font-size:0.75rem; color:#94a3b8;">狀態 / 效果</label><input type="text" value="${item["狀態"] || ''}" placeholder="例如：中毒、護體中" onchange="window.directUpdateStat('${item.id}', 'player', '狀態', this.value)" style="font-size:0.8rem; padding:4px;"></div>`;
                 } else {
