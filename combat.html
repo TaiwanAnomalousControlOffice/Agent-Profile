@@ -349,8 +349,16 @@
                 const def = item["防禦"] || 0;
                 const colType = isMonster ? 'monster' : 'player';
 
-                // 同步抓取狀態 (優先抓取 "狀態" 或 "目前狀態/異常效果")
-                const currentStatus = item["狀態"] !== undefined ? item["狀態"] : (item["目前狀態/異常效果"] || '');
+                  <!-- 狀態清單區 (已改為「狀態欄」與 gm.html 同步) -->
+                        <div class="space-y-2 bg-slate-800/40 p-4 rounded-xl border border-slate-700/50">
+                            <div class="flex justify-between items-center">
+                                <span class="font-bold text-cyan-400 text-sm">目前狀態 / 異常效果清單</span>
+                                <button onclick="window.addPlayerStatus('${playerId}')" class="bg-slate-800 hover:bg-slate-700 text-xs px-2 py-0.5 rounded border border-slate-700 cursor-pointer">＋ 新增狀態</button>
+                            </div>
+                            <div class="space-y-1.5">
+                                ${renderPlayerStatuses(playerId, p.狀態欄 || [])}
+                            </div>
+                        </div>
 
                 let html = `
                     <div class="info-group">
