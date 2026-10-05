@@ -412,7 +412,7 @@ if (!isMonster) {
         <div class="item-row"><span>解咒符</span><input type="number" value="${item["解咒符"] || 0}" onchange="window.directUpdateStat('${item.id}', 'player', '解咒符', this.value)"></div>
         <div class="item-row"><span>封魔匣</span><input type="number" value="${item["封魔匣"] || 0}" onchange="window.directUpdateStat('${item.id}', 'player', '封魔匣', this.value)"></div>
         <div class="item-row" style="grid-column: span 2;"><span>符紙</span><input type="number" value="${item["符紙"] || 0}" onchange="window.directUpdateStat('${item.id}', 'player', '符紙', this.value)"></div>
-    </div>`;
+    </div>;
     
     // 兼容處理狀態（支援陣列或字串顯示）
     let statusDisplay = "";
