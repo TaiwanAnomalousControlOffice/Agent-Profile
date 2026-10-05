@@ -38,6 +38,24 @@
                 const primaryName = p.代號 || p.姓名 || '未命名';
                 const subName = p.代號 ? `(姓名: ${p.姓名 || '-'})` : '';
 
+                // 輔助函式：取得屬性與初始值
+                const getStatHtml = (label, field, colorClass) => {
+                    const current = p[field] ?? 0;
+                    const initial = p[`${field}_初始`] ?? current;
+                    return `
+                        <div class="bg-slate-800/50 p-3 rounded-xl border border-slate-700/50 space-y-2 text-center">
+                            <div class="text-xs text-slate-400">${label}</div>
+                            <div class="text-xl font-bold ${colorClass}">${current} <span class="text-xs text-slate-400 font-normal">/ ${initial}</span></div>
+                            <div class="flex justify-center gap-1">
+                                ${current >= 5 ? `<button onclick="window.adjustValue('${playerId}', '${field}', -5,${current})" class="bg-slate-700 hover:bg-slate-600 px-1.5 py-0.5 rounded text-xs">-5</button>` : ''}
+                                <button onclick="window.adjustValue('${playerId}', '${field}', -1, ${current})" class="bg-slate-700 hover:bg-slate-600 px-1.5 py-0.5 rounded text-xs">-1</button>
+                                <button onclick="window.adjustValue('${playerId}', '${field}', 1, ${current})" class="bg-slate-700 hover:bg-slate-600 px-1.5 py-0.5 rounded text-xs">+1</button>
+                                <button onclick="window.adjustValue('${playerId}', '${field}', 5, ${current})" class="bg-slate-700 hover:bg-slate-600 px-1.5 py-0.5 rounded text-xs">+5</button>
+                            </div>
+                        </div>
+                    `;
+                };
+
                 container.innerHTML = `
                     <div class="bg-slate-900 border border-slate-800 rounded-xl p-6 shadow-2xl space-y-6">
                         <!-- 基本資料區 -->
@@ -60,68 +78,29 @@
 
                         <!-- 核心屬性調整區 -->
                         <div class="grid grid-cols-1 md:grid-cols-5 gap-4">
-                            <!-- 生命值 -->
-                            <div class="bg-slate-800/50 p-3 rounded-xl border border-slate-700/50 space-y-2 text-center">
-                                <div class="text-xs text-slate-400">生命值</div>
-                                <div class="text-2xl font-bold text-red-400">${p.生命值 ?? 0}</div>
-                                <div class="flex justify-center gap-1">
-                                    <button onclick="window.adjustValue('${playerId}', '生命值', -5, ${p.生命值 ?? 0})" class="bg-slate-700 hover:bg-slate-600 px-1.5 py-0.5 rounded text-xs">-5</button>
-                                    <button onclick="window.adjustValue('${playerId}', '生命值', -1, ${p.生命值 ?? 0})" class="bg-slate-700 hover:bg-slate-600 px-1.5 py-0.5 rounded text-xs">-1</button>
-                                    <button onclick="window.adjustValue('${playerId}', '生命值', 1, ${p.生命值 ?? 0})" class="bg-slate-700 hover:bg-slate-600 px-1.5 py-0.5 rounded text-xs">+1</button>
-                                    <button onclick="window.adjustValue('${playerId}', '生命值', 5, ${p.生命值 ?? 0})" class="bg-slate-700 hover:bg-slate-600 px-1.5 py-0.5 rounded text-xs">+5</button>
-                                </div>
-                            </div>
-                            <!-- 修為 -->
-                            <div class="bg-slate-800/50 p-3 rounded-xl border border-slate-700/50 space-y-2 text-center">
-                                <div class="text-xs text-slate-400">修為</div>
-                                <div class="text-2xl font-bold text-cyan-400">${p.修為 ?? 0}</div>
-                                <div class="flex justify-center gap-1">
-                                    <button onclick="window.adjustValue('${playerId}', '修為', -5, ${p.修為 ?? 0})" class="bg-slate-700 hover:bg-slate-600 px-1.5 py-0.5 rounded text-xs">-5</button>
-                                    <button onclick="window.adjustValue('${playerId}', '修為', -1, ${p.修為 ?? 0})" class="bg-slate-700 hover:bg-slate-600 px-1.5 py-0.5 rounded text-xs">-1</button>
-                                    <button onclick="window.adjustValue('${playerId}', '修為', 1, ${p.修為 ?? 0})" class="bg-slate-700 hover:bg-slate-600 px-1.5 py-0.5 rounded text-xs">+1</button>
-                                    <button onclick="window.adjustValue('${playerId}', '修為', 5, ${p.修為 ?? 0})" class="bg-slate-700 hover:bg-slate-600 px-1.5 py-0.5 rounded text-xs">+5</button>
-                                </div>
-                            </div>
-                            <!-- 速度 -->
-                            <div class="bg-slate-800/50 p-3 rounded-xl border border-slate-700/50 space-y-2 text-center">
-                                <div class="text-xs text-slate-400">速度</div>
-                                <div class="text-2xl font-bold text-emerald-400">${p.速度 ?? 0}</div>
-                                <div class="flex justify-center gap-1">
-                                    <button onclick="window.adjustValue('${playerId}', '速度', -5, ${p.速度 ?? 0})" class="bg-slate-700 hover:bg-slate-600 px-1.5 py-0.5 rounded text-xs">-5</button>
-                                    <button onclick="window.adjustValue('${playerId}', '速度', -1, ${p.速度 ?? 0})" class="bg-slate-700 hover:bg-slate-600 px-1.5 py-0.5 rounded text-xs">-1</button>
-                                    <button onclick="window.adjustValue('${playerId}', '速度', 1, ${p.速度 ?? 0})" class="bg-slate-700 hover:bg-slate-600 px-1.5 py-0.5 rounded text-xs">+1</button>
-                                    <button onclick="window.adjustValue('${playerId}', '速度', 5, ${p.速度 ?? 0})" class="bg-slate-700 hover:bg-slate-600 px-1.5 py-0.5 rounded text-xs">+5</button>
-                                </div>
-                            </div>
-                            <!-- 攻擊 -->
-                            <div class="bg-slate-800/50 p-3 rounded-xl border border-slate-700/50 space-y-2 text-center">
-                                <div class="text-xs text-slate-400">攻擊</div>
-                                <div class="text-2xl font-bold text-orange-400">${p.攻擊 ?? 0}</div>
-                                <div class="flex justify-center gap-1">
-                                    <button onclick="window.adjustValue('${playerId}', '攻擊', -1, ${p.攻擊 ?? 0})" class="bg-slate-700 hover:bg-slate-600 px-2 py-0.5 rounded text-xs">-1</button>
-                                    <button onclick="window.adjustValue('${playerId}', '攻擊', 1, ${p.攻擊 ?? 0})" class="bg-slate-700 hover:bg-slate-600 px-2 py-0.5 rounded text-xs">+1</button>
-                                </div>
-                            </div>
-                            <!-- 防禦 -->
-                            <div class="bg-slate-800/50 p-3 rounded-xl border border-slate-700/50 space-y-2 text-center">
-                                <div class="text-xs text-slate-400">防禦</div>
-                                <div class="text-2xl font-bold text-blue-400">${p.防禦 ?? 0}</div>
-                                <div class="flex justify-center gap-1">
-                                    <button onclick="window.adjustValue('${playerId}', '防禦', -1, ${p.防禦 ?? 0})" class="bg-slate-700 hover:bg-slate-600 px-2 py-0.5 rounded text-xs">-1</button>
-                                    <button onclick="window.adjustValue('${playerId}', '防禦', 1, ${p.防禦 ?? 0})" class="bg-slate-700 hover:bg-slate-600 px-2 py-0.5 rounded text-xs">+1</button>
-                                </div>
-                            </div>
+                            ${getStatHtml('生命值', '生命值', 'text-red-400')}
+                            ${getStatHtml('修為', '修為', 'text-cyan-400')}
+                            ${getStatHtml('速度', '速度', 'text-emerald-400')}
+                            ${getStatHtml('攻擊', '攻擊', 'text-orange-400')}
+                            ${getStatHtml('防禦', '防禦', 'text-blue-400')}
+                        </div>
+
+                        <!-- 自定義狀態區 -->
+                        <div class="bg-slate-800/40 p-3 rounded-xl border border-slate-700/50 space-y-1.5">
+                            <label class="text-xs font-bold text-cyan-400">目前狀態 / 異常效果備註</label>
+                            <textarea rows="2" onchange="window.updateField('${playerId}', '狀態備註', this.value)" class="w-full bg-slate-900 border border-slate-700 p-2 rounded text-white text-xs resize-y focus:outline-none focus:border-cyan-500" placeholder="在此輸入目前受到的狀態、Buff或Debuff...">${p.狀態備註 || ''}</textarea>
                         </div>
 
                         <!-- 消耗性道具區 -->
                         <div class="space-y-2">
                             <div class="text-sm font-bold text-cyan-400 border-b border-slate-800 pb-1">隨身消耗品</div>
-                            <div class="grid grid-cols-2 md:grid-cols-5 gap-3">
+                            <div class="grid grid-cols-2 md:grid-cols-6 gap-3">
                                 ${renderPlayerItemBox(playerId, '高效治療繃帶', p.高效治療繃帶)}
                                 ${renderPlayerItemBox(playerId, '修為恢復藥劑', p.修為恢復藥劑)}
                                 ${renderPlayerItemBox(playerId, '異常解除錠', p.異常解除錠)}
                                 ${renderPlayerItemBox(playerId, '解咒符', p.解咒符)}
                                 ${renderPlayerItemBox(playerId, '封魔匣', p.封魔匣)}
+                                ${renderPlayerItemBox(playerId, '符紙', p.符紙)}
                             </div>
                         </div>
 
