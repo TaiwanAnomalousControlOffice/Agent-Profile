@@ -404,12 +404,8 @@
                         <div class="item-row"><span>繃帶</span><input type="number" value="${item["高效治療繃帶"] || 0}" onchange="window.directUpdateStat('${item.id}', 'player', '高效治療繃帶', this.value)"></div>
                         <div class="item-row"><span>藥劑</span><input type="number" value="${item["修為恢復藥劑"] || 0}" onchange="window.directUpdateStat('${item.id}', 'player', '修為恢復藥劑', this.value)"></div>
                         <div class="item-row"><span>解錠</span><input type="number" value="${item["異常解除錠"] || 0}" onchange="window.directUpdateStat('${item.id}', 'player', '異常解除錠', this.value)"></div>
-                        <div class="item-row"><span>解咒</span><input type="number" value="${item["解咒符"] || 0}" onchange="window.directUpdateStat('${item.id}', 'player', '解咒符', this.value)"></div>
-                        <div class="item-row" style="grid-column: span 2;"><span>封魔匣</span><input type="number" value="${item["封魔匣"] || 0}" onchange="window.directUpdateStat('${item.id}', 'player', '封魔匣', this.value)"></div>
-                        <div class="item-row"><span>金光符</span><input type="number" value="${item["金光符"] || 0}" onchange="window.directUpdateStat('${item.id}', 'player', '金光符', this.value)"></div>
-                        <div class="item-row"><span>鎮邪符</span><input type="number" value="${item["鎮邪符"] || 0}" onchange="window.directUpdateStat('${item.id}', 'player', '鎮邪符', this.value)"></div>
-                        <div class="item-row"><span>神行符</span><input type="number" value="${item["神行符"] || 0}" onchange="window.directUpdateStat('${item.id}', 'player', '神行符', this.value)"></div>
-                        <div class="item-row"><span>護身符</span><input type="number" value="${item["護身符"] || 0}" onchange="window.directUpdateStat('${item.id}', 'player', '護身符', this.value)"></div>
+                        <div class="item-row"><span>封魔匣</span><input type="number" value="${item["封魔匣"] || 0}" onchange="window.directUpdateStat('${item.id}', 'player', '封魔匣', this.value)"></div>
+                        <div class="item-row" style="grid-column: span 2;"><span>符紙</span><input type="number" value="${item["符紙"] || 0}" onchange="window.directUpdateStat('${item.id}', 'player', '符紙', this.value)"></div>
                     </div>`;
                     
                     html += `<div style="margin-top: 8px;"><label style="font-size:0.75rem; color:#94a3b8;">狀態 / 效果</label><input type="text" value="${item["狀態"] || ''}" placeholder="例如：中毒、護體中" onchange="window.directUpdateStat('${item.id}', 'player', '狀態', this.value)" style="font-size:0.8rem; padding:4px;"></div>`;
