@@ -112,6 +112,17 @@
                             </div>
                         </div>
 
+                        <!-- 1.5 狀態欄 (新增) -->
+                        <div class="space-y-2 bg-rose-950/20 p-3 rounded-xl border border-rose-900/40">
+                            <div class="flex justify-between items-center">
+                                <span class="font-bold text-xs text-rose-400">目前狀態 / 異常效果</span>
+                                <button onclick="window.addStatus('${id}')" class="bg-slate-800 hover:bg-slate-700 text-xs px-2 py-0.5 rounded border border-slate-700 cursor-pointer">＋ 新增狀態</button>
+                            </div>
+                            <div id="statusList_${id}" class="space-y-1.5">
+                                ${renderStatusList(id, p.狀態欄 || [])}
+                            </div>
+                        </div>
+
                         <!-- 2. 屬性數值與初始值調整區 -->
                         <div class="grid grid-cols-2 md:grid-cols-5 gap-2.5">
                             <!-- 生命值 -->
@@ -196,16 +207,17 @@
                             </div>
                         </div>
 
-                        <!-- 3. 常用消耗品區 -->
-                        <div class="grid grid-cols-2 md:grid-cols-5 gap-2.5 bg-slate-950/40 p-3 rounded-xl border border-slate-800">
+                        <!-- 3. 常用消耗品區（含新增的「符紙」） -->
+                        <div class="grid grid-cols-2 md:grid-cols-6 gap-2.5 bg-slate-950/40 p-3 rounded-xl border border-slate-800">
                             ${renderItemControl(id, '高效治療繃帶', p.高效治療繃帶)}
                             ${renderItemControl(id, '修為恢復藥劑', p.修為恢復藥劑)}
                             ${renderItemControl(id, '異常解除錠', p.異常解除錠)}
                             ${renderItemControl(id, '解咒符', p.解咒符)}
                             ${renderItemControl(id, '封魔匣', p.封魔匣)}
+                            ${renderItemControl(id, '符紙', p.符紙)}
                         </div>
 
-                        <!-- 4. 技能配置與裝備欄位 (改為上下獨立區塊，裝備改用 textarea 支援長文字與換行) -->
+                        <!-- 4. 技能配置與裝備欄位 -->
                         <div class="space-y-3 text-xs text-slate-300 bg-slate-950/60 p-3 rounded-xl border border-slate-800">
                             <!-- 技能配置區 -->
                             <div class="space-y-1.5 border-b border-slate-800 pb-3">
@@ -225,7 +237,7 @@
                                 </div>
                             </div>
 
-                            <!-- 裝備欄位區 (改為獨立寬螢幕顯示，使用 textarea 完整顯示長說明) -->
+                            <!-- 裝備欄位區 -->
                             <div class="space-y-2">
                                 <div class="font-bold text-amber-400 text-sm">裝備欄位 (可直接修改)</div>
                                 <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
@@ -286,7 +298,6 @@
             `;
         }
 
-        // 裝備欄位改用 textarea 支援長文字與換行
         function renderEquipTextarea(id, slotName, val) {
             const dbField = `裝備_${slotName}`;
             return `
@@ -295,6 +306,17 @@
                     <textarea rows="2" onchange="window.updateField('${id}', '${dbField}', this.value)" class="bg-slate-800 border border-slate-700 p-1.5 rounded text-white text-xs resize-y focus:outline-none focus:border-amber-500" placeholder="未裝備">${val || ''}</textarea>
                 </div>
             `;
+        }
+
+        // 狀態欄渲染函數 (新增)
+        function renderStatusList(id, statuses) {
+            if (!statuses || statuses.length === 0) return '<div class="text-xs text-slate-500 text-center py-0.5">目前無特殊狀態</div>';
+            return statuses.map((st, idx) => `
+                <div class="flex items-center gap-2 bg-slate-900 p-1.5 rounded border border-slate-800 text-xs">
+                    <input type="text" value="${st || ''}" onchange="window.updateStatusItem('${id}', ${idx}, this.value)" class="bg-slate-800 border border-slate-700 px-2 py-1 rounded flex-1 text-rose-300 font-bold" placeholder="狀態名稱或說明（例如：中毒 - 每回合扣5血）">
+                    <button onclick="window.removeStatusItem('${id}', ${idx})" class="text-red-400 hover:text-red-300 px-1.5 py-1 font-bold cursor-pointer">✕</button>
+                </div>
+            `).join('');
         }
 
         function renderExtraSkills(id, skills) {
@@ -325,6 +347,36 @@
 
         window.updateField = async function(playerId, field, val) {
             await updateDoc(doc(db, "players", playerId), { [field]: val });
+        };
+
+        // 狀態欄操作相關函數 (新增)
+        window.addStatus = async function(playerId) {
+            const docRef = doc(db, "players", playerId);
+            const snap = await getDoc(docRef);
+            if (snap.exists()) {
+                const statuses = snap.data().狀態欄 || [];
+                await updateDoc(docRef, { 狀態欄: [...statuses, "新狀態"] });
+            }
+        };
+
+        window.updateStatusItem = async function(playerId, idx, val) {
+            const docRef = doc(db, "players", playerId);
+            const snap = await getDoc(docRef);
+            if (snap.exists()) {
+                let statuses = [...(snap.data().狀態欄 || [])];
+                statuses[idx] = val;
+                await updateDoc(docRef, { 狀態欄: statuses });
+            }
+        };
+
+        window.removeStatusItem = async function(playerId, idx) {
+            const docRef = doc(db, "players", playerId);
+            const snap = await getDoc(docRef);
+            if (snap.exists()) {
+                let statuses = [...(snap.data().狀態欄 || [])];
+                statuses.splice(idx, 1);
+                await updateDoc(docRef, { 狀態欄: statuses });
+            }
         };
 
         window.shortRest = async function(playerId) {
@@ -453,6 +505,8 @@
                 異常解除錠: 1,
                 解咒符: 1,
                 封魔匣: 1,
+                符紙: 5,
+                狀態欄: [],
                 '技能:種族': '天生敏銳',
                 '技能:職業': '基礎鍛鍊',
                 '技能:特殊': '無',
