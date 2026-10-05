@@ -12,7 +12,7 @@
         .combat-card.monster { border-left: 5px solid #f43f5e; background: #221821; }
         .combat-card.boss { border-left: 5px solid #a855f7; background: #2a1b3d; }
         .combat-card.player { border-left: 5px solid #38bdf8; }
-        .combat-card.ally { border-left: 5px solid #10b981; background: #132e25; }
+        .combat-card.ally { border-left: 5px solid #10b981; background: #064e3b; } /* 盟友/使魔專用綠色系 */
         .info-group { flex: 1; min-width: 280px; }
         
         /* 數值網格與卡片微調 */
@@ -41,8 +41,6 @@
         .btn-danger:hover { background: #e11d48; }
         .btn-boss { background: #a855f7; color: #fff; }
         .btn-boss:hover { background: #9333ea; }
-        .btn-success { background: #10b981; color: #fff; }
-        .btn-success:hover { background: #059669; }
         .btn-secondary { background: #334155; color: #cbd5e1; }
         .btn-secondary:hover { background: #475569; color: #fff; }
         .btn-sm { padding: 4px 8px; font-size: 0.75rem; font-weight: bold; }
@@ -51,7 +49,7 @@
         .checkbox-label { display: flex; align-items: center; gap: 6px; cursor: pointer; color: #cbd5e1; font-size: 0.9rem; }
         .control-panel { background: #0f172a; padding: 10px; border-radius: 6px; flex: 1; min-width: 260px; font-size: 0.85rem; }
         
-        /* 道具調整網格 */
+        /* 道具與狀態調整網格 */
         .item-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 4px; margin-top: 6px; }
         .item-row { display: flex; align-items: center; justify-content: space-between; background: #1e293b; padding: 2px 6px; border-radius: 4px; font-size: 0.75rem; }
         .item-row input { width: 40px; padding: 2px; text-align: center; font-size: 0.8rem; background: #0f172a; color: #facc15; border: 1px solid #475569; }
@@ -67,7 +65,7 @@
 </head>
 <body>
 
-    <h1>⚔️ TRPG 戰鬥動態排序與 Boss 面板</h1>
+    <h1>⚔️️ TRPG 戰鬥動態排序與 Boss 面板</h1>
     <p style="color: #94a3b8;">勾選參戰玩家，系統將自動依據人數計算 Boss 血量加成，並統一按速度排序。</p>
 
     <!-- 戰鬥序列列表 -->
@@ -82,16 +80,23 @@
 
     <!-- 魔物與 BOSS 範本資料庫面板 -->
     <div class="panel" style="border-color: #64748b;">
-        <h2>📚 魔物 / BOSS 範本資料庫 (可重複快速召喚)</h2>
-        <p style="font-size: 0.85rem; color: #94a3b8; margin-top: -5px;">在此建立常用敵人的數值模板，點擊「快速上場」即可一鍵部署到戰場上（支援同種魔物多次上場）。</p>
+        <h2>📚 魔物 / 盟友 / BOSS 範本資料庫 (可重複快速召喚)</h2>
+        <p style="font-size: 0.85rem; color: #94a3b8; margin-top: -5px;">在此建立常用敵人或我方使魔/盟友的數值模板，點擊「快速上場」即可一鍵部署到戰場上。</p>
         <div id="template-container" class="template-list">載入範本資料庫中...</div>
     </div>
 
-    <!-- 新增一般魔物至資料庫面板 -->
+    <!-- 新增一般魔物 / 盟友至資料庫面板 -->
     <div class="panel">
-        <h2>👹 新增一般魔物至資料庫</h2>
+        <h2>👹 新增一般魔物 / 盟友至資料庫</h2>
         <div class="form-grid">
-            <div><label>魔物名稱 / 代號</label><input type="text" id="m-name" placeholder="例如：山精野怪"></div>
+            <div><label>名稱 / 代號</label><input type="text" id="m-name" placeholder="例如：山精野怪 或 靈界使魔"></div>
+            <div>
+                <label>陣營歸屬</label>
+                <select id="m-faction">
+                    <option value="monster">敵方 (魔物/敵人)</option>
+                    <option value="ally">我方 (盟友/使魔)</option>
+                </select>
+            </div>
             <div>
                 <label>屬性</label>
                 <select id="m-element">
@@ -127,7 +132,7 @@
             </div>
         </div>
 
-        <button class="btn-danger" id="add-monster-btn" style="margin-top: 12px;">💾 儲存一般魔物至資料庫</button>
+        <button class="btn-danger" id="add-monster-btn" style="margin-top: 12px;">💾 儲存魔物/盟友至資料庫</button>
     </div>
 
     <!-- 新增 BOSS 至資料庫面板 -->
@@ -213,7 +218,7 @@
             renderTemplates();
         }, (error) => {
             console.log("尚無 monster_templates 集合或讀取中");
-            templateContainer.innerHTML = "<span style='color:#777;'>尚無儲存的魔物範本。</span>";
+            templateContainer.innerHTML = "<span style='color:#777;'>尚無儲存的魔物/盟友範本。</span>";
         });
 
         // 3. 監聽 monsters 集合
@@ -261,26 +266,33 @@
 
         function renderTemplates() {
             if (monsterTemplatesData.length === 0) {
-                templateContainer.innerHTML = "<span style='color:#777; font-size:0.85rem;'>資料庫目前沒有魔物或 BOSS 範本。請在下方新增。</span>";
+                templateContainer.innerHTML = "<span style='color:#777; font-size:0.85rem;'>資料庫目前沒有範本。請在下方新增。</span>";
                 return;
             }
 
             templateContainer.innerHTML = "";
             monsterTemplatesData.forEach(tmpl => {
                 const isBoss = tmpl.isBoss;
+                const isAlly = tmpl.faction === 'ally';
                 const card = document.createElement("div");
                 card.className = "template-card";
-                card.style.borderColor = isBoss ? '#a855f7' : '#475569';
+                card.style.borderColor = isBoss ? '#a855f7' : (isAlly ? '#10b981' : '#475569');
+                
+                let icon = '👹';
+                let titleColor = '#38bdf8';
+                if (isBoss) { icon = '👑'; titleColor = '#c084fc'; }
+                else if (isAlly) { icon = '🤝'; titleColor = '#34d399'; }
+
                 card.innerHTML = `
                     <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 4px;">
-                        <strong style="color: ${isBoss ? '#c084fc' : '#38bdf8'};">${isBoss ? '👑' : '👹'} ${tmpl.姓名}</strong>
+                        <strong style="color: ${titleColor};">${icon} ${tmpl.姓名}</strong>
                         <span style="font-size: 0.7rem; color: #94a3b8; background: #1e293b; padding: 1px 4px; border-radius: 3px;">[${tmpl.屬性 || '無'}] 速:${tmpl.速度}</span>
                     </div>
                     <div style="font-size: 0.75rem; color: #cbd5e1; margin-bottom: 8px;">
                         生命: ${tmpl.生命初始值} | 攻: ${tmpl.攻擊} | 防: ${tmpl.防禦}
                     </div>
                     <div style="display:flex; gap: 4px;">
-                        <button class="btn-sm" style="flex:1; background:${isBoss ? '#a855f7' : '#38bdf8'}; color:#0f172a;" onclick="window.spawnEnemyFromTemplate('${tmpl.id}')">⚡ 快速上場</button>
+                        <button class="btn-sm" style="flex:1; background:${isBoss ? '#a855f7' : (isAlly ? '#10b981' : '#38bdf8')}; color:#0f172a;" onclick="window.spawnEnemyFromTemplate('${tmpl.id}')">⚡ 快速上場</button>
                         <button class="btn-sm btn-danger" onclick="window.deleteTemplate('${tmpl.id}')">刪除</button>
                     </div>
                 `;
@@ -306,12 +318,12 @@
             battleList.innerHTML = "";
             allEntities.forEach((item, index) => {
                 const isMonster = item.type === 'monster';
-                const isAlly = isMonster && item.isAlly;
-                const isBoss = isMonster && item.isBoss && !isAlly;
+                const isBoss = isMonster && item.isBoss;
+                const isAlly = isMonster && item.faction === 'ally';
                 
                 let cardClass = 'player';
-                if (isAlly) cardClass = 'ally';
-                else if (isBoss) cardClass = 'boss';
+                if (isBoss) cardClass = 'boss';
+                else if (isAlly) cardClass = 'ally';
                 else if (isMonster) cardClass = 'monster';
 
                 const card = document.createElement("div");
@@ -319,10 +331,11 @@
 
                 const name = item.代號 || item.姓名 || '未命名';
                 const element = item.屬性 ? `屬性: ${item.屬性}` : '';
+                
                 let tag = `🛡 玩家 (${item.姓名})`;
-                if (isAlly) tag = `🤝 盟友/使魔 [${element}]`;
-                else if (isBoss) tag = `👑 BOSS [${element}]`;
-                else if (isMonster) tag = `👹 魔物 [${element}]`;
+                if (isBoss) tag = `👑 BOSS [${element}]`;
+                else if (isAlly) tag = `🤝 我方盟友/使魔 [${element}]`;
+                else if (isMonster) tag = `👹 敵方魔物 [${element}]`;
 
                 const speed = item["速度"] !== undefined ? item["速度"] : (item["速度初始值"] || 0);
                 const hp = item["生命值"] || 0;
@@ -338,7 +351,7 @@
                         <span style="font-size: 0.8rem; color: #94a3b8;">#${index + 1} | ${tag}</span>
                         <h3 style="margin: 2px 0 6px 0;">${name}</h3>
                         <div class="stats-grid">
-                            <!-- 1. 生命值 (-5 / -1 / +1 / +5) -->
+                            <!-- 1. 生命值 -->
                             <div class="stat-card">
                                 <span class="stat-title">生命</span>
                                 <span class="stat-limit">/ ${hpMax}</span>
@@ -350,7 +363,7 @@
                                     <button class="btn-adjust" onclick="window.adjustStatDirect('${item.id}', '${colType}', '生命值', 5)">+5</button>
                                 </div>
                             </div>
-                            <!-- 2. 修為 (-5 / -1 / +1 / +5) -->
+                            <!-- 2. 修為 -->
                             <div class="stat-card">
                                 <span class="stat-title">修為</span>
                                 <span class="stat-limit">/ ${mpMax}</span>
@@ -362,7 +375,7 @@
                                     <button class="btn-adjust" onclick="window.adjustStatDirect('${item.id}', '${colType}', '修為', 5)">+5</button>
                                 </div>
                             </div>
-                            <!-- 3. 速度 (-1 / +1) -->
+                            <!-- 3. 速度 -->
                             <div class="stat-card">
                                 <span class="stat-title">速度</span>
                                 <span class="stat-limit">&nbsp;</span>
@@ -372,7 +385,7 @@
                                     <button class="btn-adjust" onclick="window.adjustStatDirect('${item.id}', '${colType}', '速度', 1)">+1</button>
                                 </div>
                             </div>
-                            <!-- 4. 攻擊 (-1 / +1) -->
+                            <!-- 4. 攻擊 -->
                             <div class="stat-card">
                                 <span class="stat-title">攻擊</span>
                                 <span class="stat-limit">&nbsp;</span>
@@ -382,7 +395,7 @@
                                     <button class="btn-adjust" onclick="window.adjustStatDirect('${item.id}', '${colType}', '攻擊', 1)">+1</button>
                                 </div>
                             </div>
-                            <!-- 5. 防禦 (-1 / +1) -->
+                            <!-- 5. 防禦 -->
                             <div class="stat-card">
                                 <span class="stat-title">防禦</span>
                                 <span class="stat-limit">&nbsp;</span>
@@ -399,55 +412,41 @@
                 html += `<div class="control-panel" style="max-width: 250px;">`;
                 
                 if (!isMonster) {
-                    html += `<div style="color: #38bdf8; font-weight: bold; margin-bottom: 6px;">🎒 玩家道具與符紙管理</div>`;
+                    // 玩家專屬道具與狀態欄位
+                    html += `<div style="color: #38bdf8; font-weight: bold; margin-bottom: 6px;">🎒 玩家道具與狀態調整</div>`;
                     html += `<div class="item-grid">
-                        html += `<div class="control-panel" style="max-width: 250px;">`;
-
-if (!isMonster) {
-    html += `<div style="color: #38bdf8; font-weight: bold; margin-bottom: 6px;">🎒 玩家道具與符紙管理</div>`;
-    html += `<div class="item-grid">
-        <div class="item-row"><span>繃帶</span><input type="number" value="${item["高效治療繃帶"] || 0}" onchange="window.directUpdateStat('${item.id}', 'player', '高效治療繃帶', this.value)"></div>
-        <div class="item-row"><span>藥劑</span><input type="number" value="${item["修為恢復藥劑"] || 0}" onchange="window.directUpdateStat('${item.id}', 'player', '修為恢復藥劑', this.value)"></div>
-        <div class="item-row"><span>解錠</span><input type="number" value="${item["異常解除錠"] || 0}" onchange="window.directUpdateStat('${item.id}', 'player', '異常解除錠', this.value)"></div>
-        <div class="item-row"><span>解咒符</span><input type="number" value="${item["解咒符"] || 0}" onchange="window.directUpdateStat('${item.id}', 'player', '解咒符', this.value)"></div>
-        <div class="item-row"><span>封魔匣</span><input type="number" value="${item["封魔匣"] || 0}" onchange="window.directUpdateStat('${item.id}', 'player', '封魔匣', this.value)"></div>
-        <div class="item-row" style="grid-column: span 2;"><span>符紙</span><input type="number" value="${item["符紙"] || 0}" onchange="window.directUpdateStat('${item.id}', 'player', '符紙', this.value)"></div>
-    </div>;
-    
-    // 兼容處理狀態（支援陣列或字串顯示）
-    let statusDisplay = "";
-    if (Array.isArray(item["狀態"])) {
-        statusDisplay = item["狀態"].join(", ");
-    } else {
-        statusDisplay = item["狀態"] || '';
-    }
-
-    html += `<div style="margin-top: 8px;"><label style="font-size:0.75rem; color:#94a3b8;">狀態 / 效果</label><input type="text" value="${statusDisplay}" placeholder="例如：中毒、護體中" onchange="window.directUpdateStat('${item.id}', 'player', '狀態', this.value)" style="font-size:0.8rem; padding:4px;"></div>`;
-}
-                    
-                    html += `<div style="margin-top: 8px;"><label style="font-size:0.75rem; color:#94a3b8;">狀態 / 效果</label><input type="text" value="${item["狀態"] || ''}" placeholder="例如：中毒、護體中" onchange="window.directUpdateStat('${item.id}', 'player', '狀態', this.value)" style="font-size:0.8rem; padding:4px;"></div>`;
+                        <div class="item-row"><span>繃帶</span><input type="number" value="${item["高效治療繃帶"] || 0}" onchange="window.directUpdateStat('${item.id}', 'player', '高效治療繃帶', this.value)"></div>
+                        <div class="item-row"><span>藥劑</span><input type="number" value="${item["修為恢復藥劑"] || 0}" onchange="window.directUpdateStat('${item.id}', 'player', '修為恢復藥劑', this.value)"></div>
+                        <div class="item-row"><span>解錠</span><input type="number" value="${item["異常解除錠"] || 0}" onchange="window.directUpdateStat('${item.id}', 'player', '異常解除錠', this.value)"></div>
+                        <div class="item-row"><span>解咒</span><input type="number" value="${item["解咒符"] || 0}" onchange="window.directUpdateStat('${item.id}', 'player', '解咒符', this.value)"></div>
+                        <div class="item-row"><span>符紙</span><input type="number" value="${item["符紙"] || 0}" onchange="window.directUpdateStat('${item.id}', 'player', '符紙', this.value)"></div>
+                        <div class="item-row"><span>封魔匣</span><input type="number" value="${item["封魔匣"] || 0}" onchange="window.directUpdateStat('${item.id}', 'player', '封魔匣', this.value)"></div>
+                    </div>`;
+                    html += `<div style="margin-top:6px;"><span style="font-size:0.75rem; color:#94a3b8;">狀態欄位 (Buff/DeBuff)</span>
+                        <input type="text" style="font-size:0.8rem; padding:4px;" value="${item["狀態"] || ''}" placeholder="例如：靈氣護體、中毒" onchange="window.directUpdateStat('${item.id}', 'player', '狀態', this.value)"></div>`;
                 } else {
-                    html += `<div style="color: ${isAlly ? '#10b981' : (isBoss ? '#c084fc' : '#f43f5e')}; font-weight: bold; margin-bottom: 6px;">${isAlly ? '🤝 使魔/盟友 操控面板' : (isBoss ? '👑 BOSS 技能施放' : '👹 魔物技能施放')}</div>`;
+                    // 魔物 / 盟友 / BOSS 專屬技能與狀態欄位
+                    let panelTitle = isBoss ? '👑 BOSS 技能施放' : (isAlly ? '🤝 盟友技能施放' : '👹 魔物技能施放');
+                    let btnColor = isBoss ? '#a855f7' : (isAlly ? '#10b981' : '#f43f5e');
+
+                    html += `<div style="color: ${btnColor}; font-weight: bold; margin-bottom: 6px;">${panelTitle}</div>`;
                     
-                    // 技能 1
                     if (item.skill1Name && item.skill1Name !== '無') {
                         html += `<div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px; font-size:0.8rem;">
                             <span>${item.skill1Name} <b style="color:#38bdf8;">(-${item.skill1Cost || 0})</b></span>
-                            <button class="btn-sm" style="background:${isBoss ? '#a855f7' : (isAlly ? '#10b981' : '#f43f5e')}; color:#fff;" onclick="window.useMonsterSkill('${item.id}', '${item.skill1Name}', ${item.skill1Cost || 0})">施放</button>
+                            <button class="btn-sm" style="background:${btnColor}; color:#fff;" onclick="window.useMonsterSkill('${item.id}', '${item.skill1Name}', ${item.skill1Cost || 0})">施放</button>
                         </div>`;
                     }
-                    // 技能 2
                     if (item.skill2Name && item.skill2Name !== '無') {
                         html += `<div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px; font-size:0.8rem;">
                             <span>${item.skill2Name} <b style="color:#38bdf8;">(-${item.skill2Cost || 0})</b></span>
-                            <button class="btn-sm" style="background:${isBoss ? '#a855f7' : (isAlly ? '#10b981' : '#f43f5e')}; color:#fff;" onclick="window.useMonsterSkill('${item.id}', '${item.skill2Name}', ${item.skill2Cost || 0})">施放</button>
+                            <button class="btn-sm" style="background:${btnColor}; color:#fff;" onclick="window.useMonsterSkill('${item.id}', '${item.skill2Name}', ${item.skill2Cost || 0})">施放</button>
                         </div>`;
                     }
-                    // 技能 3
                     if (item.skill3Name && item.skill3Name !== '無') {
                         html += `<div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px; font-size:0.8rem;">
                             <span>${item.skill3Name} <b style="color:#38bdf8;">(-${item.skill3Cost || 0})</b></span>
-                            <button class="btn-sm" style="background:${isBoss ? '#a855f7' : (isAlly ? '#10b981' : '#f43f5e')}; color:#fff;" onclick="window.useMonsterSkill('${item.id}', '${item.skill3Name}', ${item.skill3Cost || 0})">施放</button>
+                            <button class="btn-sm" style="background:${btnColor}; color:#fff;" onclick="window.useMonsterSkill('${item.id}', '${item.skill3Name}', ${item.skill3Cost || 0})">施放</button>
                         </div>`;
                     }
 
@@ -456,14 +455,10 @@ if (!isMonster) {
                     }
 
                     // 狀態欄位
-                    html += `<div style="margin-top: 6px; margin-bottom: 6px;"><label style="font-size:0.75rem; color:#94a3b8;">狀態 / 效果</label><input type="text" value="${item["狀態"] || ''}" placeholder="例如：定身、狂暴" onchange="window.directUpdateStat('${item.id}', 'monster', '狀態', this.value)" style="font-size:0.8rem; padding:4px;"></div>`;
+                    html += `<div style="margin-top:6px;"><span style="font-size:0.75rem; color:#94a3b8;">狀態欄位 (Buff/DeBuff)</span>
+                        <input type="text" style="font-size:0.8rem; padding:4px;" value="${item["狀態"] || ''}" placeholder="例如：狂暴、定身" onchange="window.directUpdateStat('${item.id}', 'monster', '狀態', this.value)"></div>`;
 
-                    // 轉化盟友/使魔按鍵
-                    const toggleAllyText = isAlly ? "🔄 恢復為敵對魔物" : "🤝 轉化為盟友/使魔";
-                    const toggleAllyClass = isAlly ? "btn-secondary" : "btn-success";
-                    html += `<button class="${toggleAllyClass} btn-sm" style="width:100%; margin-bottom:4px;" onclick="window.toggleMonsterAlly('${item.id}', ${!isAlly})">${toggleAllyText}</button>`;
-                    
-                    html += `<button class="btn-danger btn-sm" style="width:100%;" onclick="window.deleteMonsterItem('${item.id}')">撤下${isBoss ? ' BOSS' : '魔物'}</button>`;
+                    html += `<button class="btn-danger btn-sm" style="width:100%; margin-top:8px;" onclick="window.deleteMonsterItem('${item.id}')">撤下此角色</button>`;
                 }
 
                 html += `</div>`;
@@ -471,18 +466,6 @@ if (!isMonster) {
                 battleList.appendChild(card);
             });
         }
-
-        // 切換魔物是否為盟友/使魔
-        window.toggleMonsterAlly = async (monsterId, makeAlly) => {
-            try {
-                await updateDoc(doc(db, "monsters", monsterId), {
-                    isAlly: makeAlly
-                });
-            } catch (e) {
-                console.error(e);
-                alert("狀態切換失敗！");
-            }
-        };
 
         // 點擊技能按鈕：自動扣除修為
         window.useMonsterSkill = async (monsterId, skillName, cost) => {
@@ -500,7 +483,6 @@ if (!isMonster) {
                 await updateDoc(doc(db, "monsters", monsterId), {
                     "修為": newMp
                 });
-                console.log(`[技能施放] ${target.姓名} 施放 ${skillName}，消耗修為 ${cost}`);
             } catch (e) {
                 console.error(e);
                 alert("修為扣除失敗！");
@@ -571,13 +553,15 @@ if (!isMonster) {
             }
         };
 
-        // 新增一般魔物至資料庫
+        // 新增一般魔物 / 盟友至資料庫
         document.getElementById("add-monster-btn").addEventListener("click", async () => {
             const name = document.getElementById("m-name").value.trim();
-            if (!name) { alert("請輸入魔物名稱！"); return; }
+            if (!name) { alert("請輸入名稱！"); return; }
+
+            const faction = document.getElementById("m-faction").value;
 
             const templateData = {
-                姓名: name, 代號: name, isBoss: false, isAlly: false, 狀態: "",
+                姓名: name, 代號: name, isBoss: false, faction: faction,
                 屬性: document.getElementById("m-element").value,
                 速度: Number(document.getElementById("m-speed").value) || 10,
                 速度初始值: Number(document.getElementById("m-speed").value) || 10,
@@ -589,6 +573,7 @@ if (!isMonster) {
                 攻擊初始值: Number(document.getElementById("m-atk").value) || 15,
                 防禦: Number(document.getElementById("m-def").value) || 5,
                 防禦初始值: Number(document.getElementById("m-def").value) || 5,
+                狀態: "",
                 skill1Name: document.getElementById("m-skill1-name").value.trim(),
                 skill1Cost: Number(document.getElementById("m-skill1-cost").value) || 0,
                 skill2Name: document.getElementById("m-skill2-name").value.trim(),
@@ -599,7 +584,7 @@ if (!isMonster) {
 
             try {
                 await addDoc(collection(db, "monster_templates"), templateData);
-                alert("魔物範本已成功存入資料庫！");
+                alert("範本已成功存入資料庫！");
                 document.getElementById("m-name").value = "";
             } catch (e) { console.error(e); alert("儲存失敗"); }
         });
@@ -610,7 +595,7 @@ if (!isMonster) {
             if (!name) { alert("請輸入 BOSS 名稱！"); return; }
 
             const templateData = {
-                姓名: name, 代號: name, isBoss: true, isAlly: false, 狀態: "",
+                姓名: name, 代號: name, isBoss: true, faction: "monster",
                 屬性: document.getElementById("b-element").value,
                 速度: Number(document.getElementById("b-speed").value) || 15,
                 速度初始值: Number(document.getElementById("b-speed").value) || 15,
@@ -622,6 +607,7 @@ if (!isMonster) {
                 攻擊初始值: Number(document.getElementById("b-atk").value) || 25,
                 防禦: Number(document.getElementById("b-def").value) || 10,
                 防禦初始值: Number(document.getElementById("b-def").value) || 10,
+                狀態: "",
                 skill1Name: document.getElementById("b-skill1-name").value.trim(),
                 skill1Cost: Number(document.getElementById("b-skill1-cost").value) || 0,
                 skill2Name: document.getElementById("b-skill2-name").value.trim(),
@@ -637,7 +623,7 @@ if (!isMonster) {
             } catch (e) { console.error(e); alert("儲存 BOSS 失敗"); }
         });
 
-        // 快速召喚敵人到戰場上
+        // 快速召喚敵人/盟友到戰場上
         window.spawnEnemyFromTemplate = async (templateId) => {
             const tmpl = monsterTemplatesData.find(t => t.id === templateId);
             if (!tmpl) return;
@@ -653,9 +639,7 @@ if (!isMonster) {
             const battleInstance = {
                 ...tmpl,
                 生命值: finalHp,
-                生命初始值: finalHp,
-                isAlly: false,
-                狀態: ""
+                生命初始值: finalHp
             };
             delete battleInstance.id;
 
@@ -678,7 +662,7 @@ if (!isMonster) {
             } catch (e) { console.error(e); alert("刪除失敗"); }
         };
 
-        // 從戰場撤下怪物
+        // 從戰場撤下角色
         window.deleteMonsterItem = async (id) => {
             if (!confirm("確定要將其從戰鬥中移除嗎？")) return;
             try {
